@@ -47,11 +47,10 @@ export default function DashboardLayout() {
         {!collapsed ? (
           <div className="px-4 h-16 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
-              <img src={logoIcon} alt="Ambiental Pro" className="h-10 w-10 object-contain shrink-0" />
-              <span className="text-lg font-semibold tracking-tight leading-none flex items-center truncate">
-                <span className="text-foreground">Dash </span>
-                <span className="text-foreground ml-1">Alunos</span>
-                <span className="ml-2 px-3 py-1 rounded-md text-[10px] font-bold font-sans bg-gradient-to-r from-[#6FB03A] to-[#31A8A8] text-white text-center tracking-wide">PRO</span>
+              <img src={logoIcon} alt="Ambiental Pro" className="h-9 w-9 object-contain shrink-0" />
+              <span className="text-lg font-bold tracking-tight leading-none whitespace-nowrap">
+                <span className="text-foreground">Dash Aluno</span>
+                <span className="text-[#6FB03A]">Pro</span>
               </span>
             </div>
             <Button
@@ -138,11 +137,11 @@ export default function DashboardLayout() {
         {/* Top header */}
         <header className="sticky top-0 z-20 backdrop-blur-xl bg-background/80 border-b border-border">
           <div className="flex items-center justify-between px-4 sm:px-6 xl:px-8 h-16">
-            <div className="flex items-center gap-3 lg:hidden">
-              <img src={logo} alt="Ambiental Pro" className="h-9 w-auto rounded" />
-              <span className="text-sm font-semibold flex items-center">
-                Dash Alunos
-                <span className="ml-2 px-3 py-1 rounded-md text-[8px] font-bold font-sans bg-gradient-to-r from-[#6FB03A] to-[#31A8A8] text-white text-center tracking-wide">PRO</span>
+            <div className="flex items-center gap-2.5 lg:hidden">
+              <img src={logo} alt="Ambiental Pro" className="h-8 w-auto rounded shrink-0" />
+              <span className="text-sm font-bold tracking-tight leading-none whitespace-nowrap">
+                <span className="text-foreground">Dash Aluno</span>
+                <span className="text-[#6FB03A]">Pro</span>
               </span>
             </div>
             <div className="hidden lg:flex items-center gap-2">
