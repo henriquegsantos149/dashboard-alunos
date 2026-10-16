@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Ambiental Pro — dark matte identity */
+    /* Fundo Neutro Escuro (Dark mode): #010404 */
+    --background: 180 60% 1%;
+    /* Elementos de Leitura/Textos/Fundos Claros: #E6E8E6 */
+    --foreground: 120 5% 91%;
+
+    --card: 180 50% 3%;
+    --card-foreground: 120 5% 91%;
+
+    --popover: 180 50% 2%;
+    --popover-foreground: 120 5% 91%;
+
+    /* Azul-turquesa (#31A8A8) como primary no padrão */
+    --primary: 180 55% 43%;
+    --primary-foreground: 180 60% 1%;
+    --primary-glow: 142 50% 46%; /* Verde #6FB03A para glow */
+
+    --secondary: 180 15% 10%;
+    --secondary-foreground: 120 5% 91%;
+
+    --muted: 180 15% 9%;
+    --muted-foreground: 180 10% 60%;
+
+    --accent: 142 50% 46%; /* Verde #6FB03A */
+    --accent-foreground: 120 5% 91%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 42 80% 52%;
+    --warning-foreground: 45 30% 10%;
+
+    --info: 180 55% 43%;
+    --info-foreground: 0 0% 100%;
+
+    --pink: 330 50% 58%;
+    --pink-foreground: 0 0% 100%;
+
+    --border: 180 15% 12%;
+    --input: 180 15% 12%;
+    --ring: 180 55% 43%;
+
+    --radius: 0.875rem;
+
+    /* Gradiente Padrão da Marca (Verde -> Azul) */
+    /* #6FB03A / #58AE69 (Verde) até #31A8A8 (Azul-turquesa) */
+    --gradient-brand: linear-gradient(135deg, #6FB03A, #58AE69, #31A8A8);
+    --gradient-card: linear-gradient(135deg, hsl(180 50% 3% / 0.95), hsl(180 50% 2% / 0.95));
+    --gradient-glow: radial-gradient(ellipse 900px 420px at 50% -10%, rgba(111, 176, 58, 0.1), transparent 70%);
+
+    --shadow-glow: 0 0 40px rgba(111, 176, 58, 0.1);
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.5), 0 8px 24px -16px hsl(0 0% 0% / 0.7);
+
+    --sidebar-background: 180 60% 1%;
+    --sidebar-foreground: 120 5% 80%;
+    --sidebar-primary: 180 55% 43%;
+    --sidebar-primary-foreground: 180 60% 1%;
+    --sidebar-accent: 180 20% 8%;
+    --sidebar-accent-foreground: 142 50% 46%;
+    --sidebar-border: 180 15% 10%;
+    --sidebar-ring: 180 55% 43%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      var(--gradient-glow),
+      linear-gradient(hsl(180 15% 20% / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(180 15% 20% / 0.05) 1px, transparent 1px);
+    background-size: 100% 100%, 56px 56px, 56px 56px;
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .text-gradient-brand {
+    background: var(--gradient-brand);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  /* Estilo de card inspirado no Isotipo (cantos arredondados intercalados) */
+  .brand-shape {
+    border-radius: 1.5rem 0.25rem 1.5rem 0.25rem;
+  }
+}
