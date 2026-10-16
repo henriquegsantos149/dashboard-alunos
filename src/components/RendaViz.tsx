@@ -19,7 +19,7 @@ export function RendaViz({ data }: { data: Item[] }) {
   const max = Math.max(...data.map((d) => d.value));
 
   return (
-    <div className="h-full flex flex-col gap-5 overflow-auto pr-1 py-1">
+    <div className="h-full flex flex-col justify-between overflow-auto pr-1 py-1 gap-2.5">
       {data.map((d) => {
         const meta = META[d.name] ?? { icon: Coins, color: "hsl(var(--primary))", short: d.name };
         const Icon = meta.icon;

@@ -34,37 +34,44 @@ export function StatCard({ label, value, hint, color, loading, icon: Icon, compa
       onClick={onClick}
       type={clickable ? "button" : undefined}
       className={cn(
-        "relative overflow-hidden brand-shape border bg-card/70 backdrop-blur-md p-5 text-left w-full transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] hover:border-primary/25",
+        "relative overflow-hidden brand-shape border bg-card/70 backdrop-blur-md p-3.5 sm:p-4 text-left w-full transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] hover:border-primary/25 flex flex-col justify-between min-w-0",
         clickable && "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         c.ring
       )}
     >
       <div className={cn("absolute inset-0 bg-gradient-to-br to-transparent opacity-60 pointer-events-none", c.glow)} />
 
-      {Icon && (
-        <Icon className={cn("absolute top-4 right-4 h-5 w-5 opacity-70", c.text)} aria-hidden />
-      )}
-      <div className="relative">
-        <div className="flex items-center gap-2 mb-3">
-          <span className={cn("h-2 w-2 rounded-full", c.dot)} />
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      {/* Header: Label and Icon in flex to guarantee zero overlapping */}
+      <div className="relative flex items-start justify-between gap-1.5 mb-2 w-full">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", c.dot)} />
+          <p
+            className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground leading-tight truncate"
+            title={label}
+          >
             {label}
           </p>
           {info && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span
-                  className="text-muted-foreground/70 hover:text-foreground transition-colors cursor-help"
+                  className="text-muted-foreground/70 hover:text-foreground transition-colors cursor-help shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Info className="h-3.5 w-3.5" />
+                  <Info className="h-3 w-3" />
                 </span>
               </TooltipTrigger>
               <TooltipContent className="max-w-[260px] text-xs leading-relaxed">{info}</TooltipContent>
             </Tooltip>
           )}
         </div>
-        <p className={cn("font-bold tabular-nums text-4xl font-display", c.text)}>
+        {Icon && (
+          <Icon className={cn("h-4 w-4 shrink-0 opacity-70 ml-1 mt-0.5", c.text)} aria-hidden />
+        )}
+      </div>
+
+      <div className="relative min-w-0">
+        <p className={cn("font-bold tabular-nums text-2xl sm:text-3xl 2xl:text-4xl font-display leading-tight truncate", c.text)}>
           {loading
             ? "—"
             : typeof value === "number"
@@ -73,18 +80,22 @@ export function StatCard({ label, value, hint, color, loading, icon: Icon, compa
                 const m = String(value).match(/^(.*?)\s*(\(.*\))\s*$/);
                 if (m) {
                   return (
-                    <>
-                      {m[1]}
-                      <span className="ml-1.5 text-xs md:text-sm font-semibold opacity-80">
+                    <span className="inline-flex items-baseline flex-wrap gap-x-1">
+                      <span>{m[1]}</span>
+                      <span className="text-xs sm:text-sm font-sans font-medium opacity-75">
                         {m[2]}
                       </span>
-                    </>
+                    </span>
                   );
                 }
                 return value;
               })()}
         </p>
-        {hint && <p className="text-xs text-muted-foreground mt-2">{hint}</p>}
+        {hint && (
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 truncate" title={hint}>
+            {hint}
+          </p>
+        )}
       </div>
     </Comp>
   );

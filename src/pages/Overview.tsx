@@ -629,7 +629,11 @@ export default function Overview() {
         </Tabs>
       </div>
 
-      <section className={`grid grid-cols-2 gap-4 ${filter === "all" ? "lg:grid-cols-5" : "md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7"}`}>
+      <section className={`grid gap-3 sm:gap-4 ${
+        filter === "all"
+          ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+          : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-7"
+      }`}>
         <StatCard
           color="info"
           icon={Users}
@@ -730,9 +734,9 @@ export default function Overview() {
 
 
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <section className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
         <ChartCard title="Status de Matrícula" description="Distribuição por status" height={360}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 h-full items-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 h-full items-center">
             <div className="h-full min-h-[200px] min-w-0">
               <DonutChart data={statusData} />
             </div>
@@ -741,6 +745,7 @@ export default function Overview() {
             </div>
           </div>
         </ChartCard>
+
         <ChartCard
           title="Atuação Profissional"
           description="Categorias padronizadas"
@@ -771,6 +776,7 @@ export default function Overview() {
         >
           <HBarChart data={atuacaoData} tooltipLabel="Atuação" />
         </ChartCard>
+
         <ChartCard
           title="Formação"
           description="Áreas de formação acadêmica"
@@ -801,13 +807,39 @@ export default function Overview() {
         >
           <HBarChart data={formacaoData} tooltipLabel="Formação" />
         </ChartCard>
-      </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <ChartCard title="Idade dos Alunos" description="Com base nas Fichas de Matrícula e Formados" height={340}>
+        <ChartCard
+          title="Faixa de Renda Mensal"
+          description="Fichas de Matrícula e Formados"
+          height={360}
+          action={
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 h-8" disabled={renda.alunos.length === 0}>
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="text-xs">Exportar</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuItem onClick={() => exportRendaCSV(renda.alunos, "all")}>
+                  Todas as faixas ({renda.alunos.length})
+                </DropdownMenuItem>
+                {rendaData.map((d) => (
+                  <DropdownMenuItem key={d.name} onClick={() => exportRendaCSV(renda.alunos, d.name)}>
+                    {d.name} ({d.value})
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
+        >
+          <RendaViz data={rendaData} />
+        </ChartCard>
+
+        <ChartCard title="Idade dos Alunos" description="Com base nas Fichas de Matrícula e Formados" height={360}>
           {idadeStats.count > 0 ? (
-            <div className="h-full flex flex-col">
-              <div className="flex items-center gap-4 mb-3">
+            <div className="h-full flex flex-col justify-between">
+              <div className="flex items-center gap-4 mb-2">
                 <div className="h-14 w-14 rounded-xl bg-primary/10 grid place-items-center shrink-0">
                   <Cake className="h-7 w-7 text-primary" />
                 </div>
@@ -853,35 +885,9 @@ export default function Overview() {
             <div className="h-full grid place-items-center text-xs text-muted-foreground">Sem dados</div>
           )}
         </ChartCard>
-        <ChartCard title="Gênero" description="Distribuição por gênero (Ficha de Matrícula)" height={340}>
+
+        <ChartCard title="Gênero" description="Distribuição por gênero (Ficha de Matrícula)" height={360}>
           <GenderViz data={generoData} />
-        </ChartCard>
-        <ChartCard
-          title="Faixa de Renda Mensal"
-          description="Fichas de Matrícula e Formados"
-          height={340}
-          action={
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-8" disabled={renda.alunos.length === 0}>
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="text-xs">Exportar</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuItem onClick={() => exportRendaCSV(renda.alunos, "all")}>
-                  Todas as faixas ({renda.alunos.length})
-                </DropdownMenuItem>
-                {rendaData.map((d) => (
-                  <DropdownMenuItem key={d.name} onClick={() => exportRendaCSV(renda.alunos, d.name)}>
-                    {d.name} ({d.value})
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }
-        >
-          <RendaViz data={rendaData} />
         </ChartCard>
       </section>
     </div>

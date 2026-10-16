@@ -41,7 +41,7 @@ export default function DashboardLayout() {
       <aside
         className={cn(
           "hidden lg:flex flex-col border-r border-sidebar-border bg-sidebar shrink-0 overflow-hidden transition-[width] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          collapsed ? "w-16" : "w-72"
+          collapsed ? "w-16" : "w-64"
         )}
       >
         {!collapsed ? (
@@ -137,7 +137,7 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top header */}
         <header className="sticky top-0 z-20 backdrop-blur-xl bg-background/80 border-b border-border">
-          <div className="flex items-center justify-between px-4 lg:px-8 h-16">
+          <div className="flex items-center justify-between px-4 sm:px-6 xl:px-8 h-16">
             <div className="flex items-center gap-3 lg:hidden">
               <img src={logo} alt="Ambiental Pro" className="h-9 w-auto rounded" />
               <span className="text-sm font-semibold flex items-center">
@@ -186,11 +186,11 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        <main className="flex-1 px-4 lg:px-8 py-8 max-w-[1600px] w-full mx-auto">
+        <main className="flex-1 px-4 sm:px-6 xl:px-8 py-6 sm:py-8 max-w-[1600px] w-full mx-auto">
           <Outlet />
         </main>
         <footer className="border-t border-border/60 bg-background/40 mt-4">
-          <div className="max-w-[1600px] mx-auto px-4 lg:px-8 py-6 flex justify-center">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 xl:px-8 py-6 flex justify-center">
             <span className="text-[11px] sm:text-xs font-medium tracking-[0.28em] uppercase text-muted-foreground/80">
               Ambiental Pro &mdash; Conhecimento que transforma
             </span>

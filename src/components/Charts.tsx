@@ -21,15 +21,15 @@ interface ChartCardProps {
 
 export function ChartCard({ title, description, children, height = 288, action }: ChartCardProps) {
   return (
-    <div className="rounded-2xl border border-border bg-card/70 backdrop-blur-md p-5 shadow-[var(--shadow-card)]">
+    <div className="rounded-2xl border border-border bg-card/70 backdrop-blur-md p-4 sm:p-5 shadow-[var(--shadow-card)] min-w-0">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-base font-semibold">{title}</h3>
-          {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+          <h3 className="text-base font-semibold truncate" title={title}>{title}</h3>
+          {description && <p className="text-xs text-muted-foreground mt-0.5 truncate" title={description}>{description}</p>}
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
-      <div style={{ height }}>{children}</div>
+      <div style={{ height }} className="min-w-0">{children}</div>
     </div>
   );
 }
@@ -103,15 +103,15 @@ export function HBarChart({
     return <div className="h-full grid place-items-center text-xs text-muted-foreground">Sem dados</div>;
   }
   const maxLabelLen = Math.max(...data.map((d: any) => String(d[labelKey] ?? "").length), 8);
-  const yAxisWidth = Math.min(180, Math.max(70, maxLabelLen * 5.6 + 12));
+  const yAxisWidth = Math.min(160, Math.max(65, maxLabelLen * 5.4 + 10));
   const maxValue = Math.max(...data.map((d: any) => Number(d[dataKey]) || 0));
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ left: 4, right: 16, top: 8, bottom: 8 }}
-        barCategoryGap="35%"
+        margin={{ left: 0, right: 12, top: 4, bottom: 4 }}
+        barCategoryGap="30%"
       >
         <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={10.5} allowDecimals={false} />
         <YAxis
@@ -122,7 +122,7 @@ export function HBarChart({
           width={yAxisWidth}
           interval={0}
           tickMargin={2}
-          tick={<WrappedTick width={yAxisWidth - 8} />}
+          tick={<WrappedTick width={yAxisWidth - 6} />}
         />
         <Tooltip
           cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
@@ -155,8 +155,8 @@ export function DonutChart({ data }: { data: { name: string; value: number }[] }
           data={data}
           dataKey="value"
           nameKey="name"
-          innerRadius={45}
-          outerRadius={80}
+          innerRadius={42}
+          outerRadius={72}
           paddingAngle={3}
           stroke="hsl(var(--background))"
           strokeWidth={2}
@@ -260,18 +260,19 @@ export function TreemapChart({ data }: { data: { name: string; value: number }[]
 export function ChartLegend({ data }: { data: { name: string; value: number }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   return (
-    <ul className="space-y-1.5 text-xs">
+    <ul className="space-y-1.5 text-xs w-full min-w-0">
       {data.map((d, i) => (
-        <li key={d.name} className="flex items-center justify-between gap-3">
-          <span className="flex items-center gap-2 truncate">
+        <li key={d.name} className="flex items-center justify-between gap-2 min-w-0" title={`${d.name}: ${d.value} (${((d.value / total) * 100).toFixed(0)}%)`}>
+          <span className="flex items-center gap-1.5 min-w-0 truncate">
             <span
-              className="h-2.5 w-2.5 rounded-sm shrink-0"
+              className="h-2 w-2 rounded-full shrink-0"
               style={{ background: colorFor(d.name, i) }}
             />
-            <span className="truncate">{d.name}</span>
+            <span className="truncate text-foreground/90">{d.name}</span>
           </span>
-          <span className="tabular-nums text-muted-foreground">
-            {d.value} <span className="opacity-60">({((d.value / total) * 100).toFixed(0)}%)</span>
+          <span className="tabular-nums text-muted-foreground shrink-0 text-right whitespace-nowrap pl-1">
+            <span className="font-medium text-foreground">{d.value}</span>{" "}
+            <span className="opacity-70 text-[11px]">({((d.value / total) * 100).toFixed(0)}%)</span>
           </span>
         </li>
       ))}
