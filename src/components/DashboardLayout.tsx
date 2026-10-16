@@ -49,7 +49,7 @@ export default function DashboardLayout() {
             <div className="flex items-center gap-2.5 min-w-0">
               <img src={logoIcon} alt="Ambiental Pro" className="h-9 w-9 object-contain shrink-0" />
               <span className="text-lg font-bold tracking-tight leading-none whitespace-nowrap">
-                <span className="text-foreground">Dash Aluno</span>
+                <span className="text-foreground">Dash Alunos</span>
                 <span className="text-[#6FB03A]">Pro</span>
               </span>
             </div>
@@ -140,7 +140,7 @@ export default function DashboardLayout() {
             <div className="flex items-center gap-2.5 lg:hidden">
               <img src={logo} alt="Ambiental Pro" className="h-8 w-auto rounded shrink-0" />
               <span className="text-sm font-bold tracking-tight leading-none whitespace-nowrap">
-                <span className="text-foreground">Dash Aluno</span>
+                <span className="text-foreground">Dash Alunos</span>
                 <span className="text-[#6FB03A]">Pro</span>
               </span>
             </div>
