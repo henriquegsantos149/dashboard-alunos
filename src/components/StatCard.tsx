@@ -25,6 +25,18 @@ const COLORS: Record<StatColor, { ring: string; text: string; glow: string; dot:
   destructive: { ring: "border-destructive/30", text: "text-destructive", glow: "from-destructive/15", dot: "bg-destructive" },
 };
 
+function formatNumberWithDot(val: number | string): string {
+  if (typeof val === "number") {
+    return String(Math.round(val)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  }
+  let s = String(val).trim();
+  // Turn any thousand commas into dots (e.g. 1,611 -> 1.611)
+  s = s.replace(/(\d+),(\d{3})/g, "$1.$2");
+  // Add dot if raw digits >= 4 without separator (e.g. 1611 -> 1.611)
+  s = s.replace(/\b\d{4,}\b/g, (match) => match.replace(/\B(?=(\d{3})+(?!\d))/g, "."));
+  return s;
+}
+
 export function StatCard({ label, value, hint, color, loading, icon: Icon, compact, onClick, info }: Props) {
   const c = COLORS[color];
   const clickable = typeof onClick === "function";
@@ -33,8 +45,9 @@ export function StatCard({ label, value, hint, color, loading, icon: Icon, compa
     <Comp
       onClick={onClick}
       type={clickable ? "button" : undefined}
+      translate="no"
       className={cn(
-        "relative overflow-hidden brand-shape border bg-card/70 backdrop-blur-md p-3.5 sm:p-4 text-left w-full transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] hover:border-primary/25 flex flex-col justify-between min-w-0",
+        "notranslate relative overflow-hidden brand-shape border bg-card/70 backdrop-blur-md p-3.5 sm:p-4 text-left w-full transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] hover:border-primary/25 flex flex-col justify-between min-w-0",
         clickable && "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         c.ring
       )}
@@ -71,24 +84,30 @@ export function StatCard({ label, value, hint, color, loading, icon: Icon, compa
       </div>
 
       <div className="relative min-w-0">
-        <p className={cn("font-bold tabular-nums text-2xl sm:text-3xl 2xl:text-4xl font-display leading-tight truncate", c.text)}>
+        <p
+          translate="no"
+          className={cn(
+            "notranslate font-bold tabular-nums text-2xl sm:text-3xl 2xl:text-4xl font-display leading-tight truncate",
+            c.text
+          )}
+        >
           {loading
             ? "—"
             : typeof value === "number"
-            ? String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+            ? formatNumberWithDot(value)
             : (() => {
                 const m = String(value).match(/^(.*?)\s*(\(.*\))\s*$/);
                 if (m) {
                   return (
                     <span className="inline-flex items-baseline flex-wrap gap-x-1">
-                      <span>{m[1]}</span>
+                      <span>{formatNumberWithDot(m[1])}</span>
                       <span className="text-xs sm:text-sm font-sans font-medium opacity-75">
                         {m[2]}
                       </span>
                     </span>
                   );
                 }
-                return value;
+                return formatNumberWithDot(value);
               })()}
         </p>
         {hint && (

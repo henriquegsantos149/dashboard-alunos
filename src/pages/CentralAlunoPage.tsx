@@ -361,8 +361,8 @@ export default function CentralAlunoPage() {
           <p className="text-sm text-muted-foreground">
             Use a busca acima para localizar um aluno e visualizar sua jornada completa.
           </p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
-            Base unificada: {perfis.length.toLocaleString("pt-BR")} alunos consolidados por e-mail.
+          <p className="notranslate text-xs text-muted-foreground/70 mt-1" translate="no">
+            Base unificada: {String(perfis.length).replace(/\B(?=(\d{3})+(?!\d))/g, ".")} alunos consolidados por e-mail.
           </p>
         </div>
       )}
