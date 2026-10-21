@@ -43,7 +43,7 @@ function courseBucket(raw: string): string {
   if (v.includes("pap") || v.includes("programa ambiental pro")) return "pap";
   if (v.includes("f2w") || v.includes("webgis e webapps") || v.includes("formacao 2w")) return "f2w";
   if (v.includes("geodev") || v.includes("python geodev")) return "geodev";
-  if (v.includes("workshop")) return "workshop";
+  if (v.includes("workshop") || v.includes("geoportal") || (v.includes("webgis") && v.includes("pratica"))) return "workshop";
   if (v.includes("ggsr") || v.includes("georreferenciamento")) return "ggsr";
   if (v.includes("alpa") || v.includes("pericia")) return "alpa";
   if (v.includes("mba") || v.includes(" ida")) return "mba";

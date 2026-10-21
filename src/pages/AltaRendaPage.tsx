@@ -64,11 +64,23 @@ const CURSO_OPTIONS = [
   "Pós ALPA",
   "Pós GRAC",
   "MBA IDA",
+  "Pós IA.MA",
   "PAP",
   "Python GeoDev",
   "R GeoDev",
   "F2W",
+  "Workshop WebGIS na Prática",
 ] as const;
+
+const ORIGEM_OPTIONS = [
+  "Ficha de Matrícula",
+  "Ficha de Formados",
+  "Ficha Alunos 10K",
+  "Planilha Diamante",
+  "Planilha 10K/mês",
+] as const;
+
+type OrigemFilter = "all" | (typeof ORIGEM_OPTIONS)[number];
 
 // Retorna lista de cursos oficiais encontrados no texto livre.
 // Suporta strings com múltiplos cursos (ex: "MBA IDA, PAP e F2W").
@@ -86,15 +98,79 @@ function extractCursos(raw: string): string[] {
     add("Pós GRAC");
   if (v.includes("mba") || v.includes("inteligencia de dados") || v.includes("ida ambient"))
     add("MBA IDA");
+  if (v.includes("ia.ma") || v.includes("iama") || (v.includes("inteligencia artificial") && v.includes("meio ambiente")))
+    add("Pós IA.MA");
   if (/\bpap\b/.test(v) || v.includes("programa ambiental pro")) add("PAP");
   if (v.includes("python") && (v.includes("geodev") || v.includes("geo dev") || v.includes("geo-dev")))
     add("Python GeoDev");
   else if (v.includes("python")) add("Python GeoDev");
   if (/(^|[^a-z])r\s*geo\s*dev/.test(v)) add("R GeoDev");
   else if (/(^|[ ,])r([ ,]|$)/.test(v) && (v.includes("geodev") || v.includes("python"))) add("R GeoDev");
-  if (v.includes("f2w") || v.includes("webgis") || v.includes("webapps")) add("F2W");
+
+  // Workshop WebGIS - Deve vir ANTES do teste de F2W para não classificar Workshop como F2W
+  if (
+    v.includes("workshop") ||
+    v.includes("geoportal") ||
+    v.includes("qgis ao geoportal") ||
+    (v.includes("webgis") && v.includes("pratica"))
+  ) {
+    add("Workshop WebGIS na Prática");
+  }
+
+  // F2W só adiciona se for F2W explícito ou se não for exclusivamente o Workshop WebGIS
+  if (v.includes("f2w") || (!v.includes("workshop") && (v.includes("webgis") || v.includes("webapps")))) {
+    add("F2W");
+  }
+
   return out;
 }
+
+// Colunas tolerantes a variações de cabeçalhos
+const CURSO_MATRICULA_COLS = [
+  "Você se matriculou em qual das nossas formações?",
+  "qual das nossas formações",
+  "qual das nossas formacoes",
+  "formações",
+  "formacoes",
+  "curso",
+];
+
+const CURSO_FORMADOS_COLS = [
+  "Você concluiu qual das nossas formações?",
+  "qual das nossas formações",
+  "qual das nossas formacoes",
+  "formações",
+  "formacoes",
+  "curso",
+];
+
+const RENDA_COLS = [
+  "Para entendermos melhor o perfil dos nossos alunos, qual faixa de renda mensal mais se aproxima da sua realidade atualmente?",
+  "qual faixa de renda mensal mais se aproxima da sua realidade atualmente",
+  "faixa de renda",
+  "renda mensal",
+  "renda",
+];
+
+const EMAIL_COLS = [
+  "Qual o e-mail que você utilizou na sua matrícula?",
+  "Qual o e-mail que você utilizou em sua matrícula?",
+  "Qual o seu e-mail?",
+  "E-mail",
+  "Email",
+];
+
+const NOME_COLS = ["Qual o seu nome?", "Nome", "Aluno(a)", "Aluno"];
+
+const PHONE_COLS = [
+  "Qual o seu Whatsapp (com DDD)?",
+  "Qual é o seu Whatsapp (com DDD)?",
+  "Whatsapp",
+  "WhatsApp",
+  "Telefone",
+  "Celular",
+  "Contato",
+];
 
 // Retorna "" caso o texto não corresponda a um dos cursos oficiais
 function normalizeCurso(raw: string): string {
@@ -142,6 +218,7 @@ export default function AltaRendaPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("all");
   const [cursoFilter, setCursoFilter] = useState<string>("all");
+  const [origemFilter, setOrigemFilter] = useState<OrigemFilter>("all");
 
   const alunos = useMemo<Aluno[]>(() => {
     if (!data) return [];
@@ -168,28 +245,16 @@ export default function AltaRendaPage() {
     };
 
     for (const r of data.fichaMatricula)
-      setFromRow(
-        r,
-        ["Qual o e-mail que você utilizou na sua matrícula?", "E-mail", "Email"],
-        ["Qual o seu nome?", "Nome"],
-        ["Qual o seu Whatsapp (com DDD)?", "Whatsapp"],
-        ["Você se matriculou em qual das nossas formações?"],
-      );
+      setFromRow(r, EMAIL_COLS, NOME_COLS, PHONE_COLS, CURSO_MATRICULA_COLS);
     for (const r of data.formados)
-      setFromRow(
-        r,
-        ["Qual o e-mail que você utilizou em sua matrícula?", "E-mail", "Email"],
-        ["Qual o seu nome?", "Nome"],
-        ["Qual é o seu Whatsapp (com DDD)?", "Whatsapp"],
-        ["Você concluiu qual das nossas formações?"],
-      );
+      setFromRow(r, EMAIL_COLS, NOME_COLS, PHONE_COLS, CURSO_FORMADOS_COLS);
     for (const r of data.fichaAlunos10k)
       setFromRow(
         r,
-        ["Qual o seu e-mail?", "Email", "E-mail"],
-        ["Qual o seu nome?", "Nome"],
-        ["Qual o seu Whatsapp (com DDD)?", "Whatsapp"],
-        ["Você foi (é) aluno de qual (quais) dos nossos cursos?"],
+        EMAIL_COLS,
+        NOME_COLS,
+        PHONE_COLS,
+        ["Você foi (é) aluno de qual (quais) dos nossos cursos?", "Cursos", "Curso"],
       );
     for (const r of data.alunosDiamante ?? [])
       setFromRow(
@@ -293,21 +358,12 @@ export default function AltaRendaPage() {
 
     // 1. Ficha de Matrícula com renda > 10k
     for (const r of data.fichaMatricula) {
-      const renda = getCol(r, [
-        "Para entendermos melhor o perfil dos nossos alunos, qual faixa de renda mensal mais se aproxima da sua realidade atualmente?",
-        "faixa de renda",
-      ]);
+      const renda = getCol(r, RENDA_COLS);
       if (!isAcima10k(renda)) continue;
-      const nome = getCol(r, ["Qual o seu nome?", "Nome"]);
-      const email = getCol(r, [
-        "Qual o e-mail que você utilizou na sua matrícula?",
-        "E-mail",
-        "Email",
-      ]);
-      const phone = getCol(r, ["Qual o seu Whatsapp (com DDD)?", "Whatsapp"]);
-      const curso = normalizeCurso(
-        getCol(r, ["Você se matriculou em qual das nossas formações?"]),
-      );
+      const nome = getCol(r, NOME_COLS);
+      const email = getCol(r, EMAIL_COLS);
+      const phone = getCol(r, PHONE_COLS);
+      const curso = normalizeCurso(getCol(r, CURSO_MATRICULA_COLS));
       const keys = keysFor(email, nome);
       push({
         nome,
@@ -321,21 +377,12 @@ export default function AltaRendaPage() {
 
     // 2. Formados com renda > 10k
     for (const r of data.formados) {
-      const renda = getCol(r, [
-        "Para entendermos melhor o perfil dos nossos alunos, qual faixa de renda mensal mais se aproxima da sua realidade atualmente?",
-        "faixa de renda",
-      ]);
+      const renda = getCol(r, RENDA_COLS);
       if (!isAcima10k(renda)) continue;
-      const nome = getCol(r, ["Qual o seu nome?", "Nome"]);
-      const email = getCol(r, [
-        "Qual o e-mail que você utilizou em sua matrícula?",
-        "E-mail",
-        "Email",
-      ]);
-      const phone = getCol(r, ["Qual é o seu Whatsapp (com DDD)?", "Whatsapp"]);
-      const curso = normalizeCurso(
-        getCol(r, ["Você concluiu qual das nossas formações?"]),
-      );
+      const nome = getCol(r, NOME_COLS);
+      const email = getCol(r, EMAIL_COLS);
+      const phone = getCol(r, PHONE_COLS);
+      const curso = normalizeCurso(getCol(r, CURSO_FORMADOS_COLS));
       const keys = keysFor(email, nome);
       push({
         nome,
@@ -343,15 +390,15 @@ export default function AltaRendaPage() {
         telefone: phone || lookupPhone(keys, ""),
         curso: curso || lookupCurso(keys, ""),
         status: statusFor(keys),
-        origem: "Formados",
+        origem: "Ficha de Formados",
       });
     }
 
     // 3. Ficha Alunos 10K — declararam faturamento ≥ 10K
     for (const r of data.fichaAlunos10k) {
-      const nome = getCol(r, ["Qual o seu nome?", "Nome"]);
-      const email = getCol(r, ["Qual o seu e-mail?", "Email", "E-mail"]);
-      const phone = getCol(r, ["Qual o seu Whatsapp (com DDD)?", "Whatsapp"]);
+      const nome = getCol(r, NOME_COLS);
+      const email = getCol(r, EMAIL_COLS);
+      const phone = getCol(r, PHONE_COLS);
       if (!nome && !email) continue;
       const keys = keysFor(email, nome);
       push({
@@ -402,7 +449,20 @@ export default function AltaRendaPage() {
     const q = stripAccents(query);
     return alunos.filter((a) => {
       if (statusFilter !== "all" && a.status !== statusFilter) return false;
-      if (cursoFilter !== "all" && a.curso !== cursoFilter) return false;
+      if (cursoFilter !== "all") {
+        const cursosAluno = a.curso.split(", ").map((c) => c.trim());
+        if (!cursosAluno.includes(cursoFilter) && !a.curso.includes(cursoFilter)) return false;
+      }
+      if (origemFilter !== "all") {
+        const origens = a.origem.split(", ").map((o) => o.trim());
+        const match = origens.some((o) => {
+          if (o === origemFilter) return true;
+          if (origemFilter === "Ficha de Formados" && (o === "Formados" || o === "Ficha de Formados")) return true;
+          if (origemFilter === "Ficha de Matrícula" && (o === "Matrícula" || o === "Ficha de Matrícula")) return true;
+          return false;
+        });
+        if (!match) return false;
+      }
       if (!q) return true;
       return (
         stripAccents(a.nome).includes(q) ||
@@ -412,7 +472,7 @@ export default function AltaRendaPage() {
         stripAccents(a.origem).includes(q)
       );
     });
-  }, [alunos, query, statusFilter, cursoFilter]);
+  }, [alunos, query, statusFilter, cursoFilter, origemFilter]);
 
   const stats = useMemo(() => {
     const total = alunos.length;
@@ -448,6 +508,7 @@ export default function AltaRendaPage() {
     setQuery("");
     setStatusFilter("all");
     setCursoFilter("all");
+    setOrigemFilter("all");
   };
 
   return (
@@ -488,17 +549,17 @@ export default function AltaRendaPage() {
       </section>
 
       <div className="rounded-2xl border border-border bg-card/70 backdrop-blur-md p-5">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4">
-          <div className="relative md:col-span-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 mb-4">
+          <div className="relative sm:col-span-2 lg:col-span-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar nome, telefone, e-mail, curso…"
+              placeholder="Buscar nome, telefone, e-mail, curso, origem…"
               className="pl-9"
             />
           </div>
-          <div className="md:col-span-3">
+          <div className="sm:col-span-1 lg:col-span-3">
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
               <SelectTrigger>
                 <SelectValue placeholder="Status" />
@@ -511,7 +572,22 @@ export default function AltaRendaPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-3">
+          <div className="sm:col-span-1 lg:col-span-3">
+            <Select value={origemFilter} onValueChange={(v) => setOrigemFilter(v as OrigemFilter)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Origem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as origens</SelectItem>
+                {ORIGEM_OPTIONS.map((origem) => (
+                  <SelectItem key={origem} value={origem}>
+                    {origem}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2 lg:col-span-3">
             <Select value={cursoFilter} onValueChange={setCursoFilter}>
               <SelectTrigger>
                 <SelectValue placeholder="Curso" />

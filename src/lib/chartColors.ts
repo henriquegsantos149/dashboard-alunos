@@ -54,6 +54,8 @@ export const CURSO_COLORS: Record<string, string> = {
   "GeoDev": "hsl(224 38% 68%)",
   "Python GeoDev": "hsl(224 38% 68%)",
   "Workshop": "hsl(22 45% 62%)",
+  "Workshop WebGIS na Prática": "hsl(22 45% 62%)",
+  "Workshop WebGIS": "hsl(22 45% 62%)",
 };
 
 export function cursoColor(name: string): string {
