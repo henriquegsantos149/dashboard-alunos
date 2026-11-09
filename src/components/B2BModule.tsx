@@ -238,6 +238,19 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
   const s = strip(t);
   if (
     INVALIDOS.has(s) ||
+    s.includes("autonom") ||
+    s.includes("autnom") ||
+    s.includes("liberal") ||
+    s.includes("freelanc") ||
+    s.includes("propria") ||
+    s.includes("minha empresa") ||
+    s.includes("eu mesmo") ||
+    s.includes("eu mesma") ||
+    s.includes("nao possuo") ||
+    s.includes("nao tenho") ||
+    s.includes("nao se aplica") ||
+    s.includes("aposentad") ||
+    s.includes("concursad") ||
     s.startsWith("atualmente") ||
     s.startsWith("sou atualmente") ||
     s.startsWith("trabalho atualmente") ||
@@ -252,7 +265,8 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
     s.includes("funcionario publico") ||
     s.includes("nao trabalho") ||
     s.includes("sem empresa") ||
-    s.includes("desempregad")
+    s.includes("desempregad") ||
+    s.includes("estudante")
   ) {
     return { empresa: "" };
   }
@@ -363,6 +377,7 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
     });
   };
 
+  // 1. "Planilha de Alunos" (Pós-GGSR, MBA, Pós-ALPA, Pós-GRAC, Pós-IA.MA)
   for (const r of allPosRows(data)) {
     add(
       getCol(r, ["Empresa que trabalha"]),
@@ -374,7 +389,9 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
     );
   }
 
-  for (const r of data.fichaMatricula ?? []) {
+  // 2. "Dados das Fichas" — Ficha de Matrícula (apenas dados oficiais da planilha, sem bases antigas)
+  const matriculaRows = data.liveFichaMatricula ?? (data.fichaMatricula ?? []).filter((r) => !r._source);
+  for (const r of matriculaRows) {
     add(
       getCol(r, ["Você trabalha em alguma empresa? Se sim, qual?"]),
       getCol(r, ["Qual o seu nome?", "Nome"]),
@@ -385,6 +402,7 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
     );
   }
 
+  // 2. "Dados das Fichas" — Formados
   for (const r of data.formados ?? []) {
     add(
       getCol(r, ["Você trabalha em alguma empresa? Se sim, qual?"]),
@@ -396,6 +414,7 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
     );
   }
 
+  // 3. "Ficha Alunos 10K"
   for (const r of data.fichaAlunos10k ?? []) {
     add(
       getCol(r, ["Você trabalha em alguma empresa? Se sim, qual?"]),
@@ -404,17 +423,6 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
       getCol(r, CARGO_KEYS),
       getCol(r, ["Qual o seu Whatsapp (com DDD)?", "Whatsapp"]),
       getCol(r, ["Qual o seu e-mail?", "Email", "E-mail"]),
-    );
-  }
-
-  for (const r of data.alunos10k ?? []) {
-    add(
-      getCol(r, ["Empresa que trabalha"]),
-      getCol(r, ["Nome"]),
-      getCol(r, ["Cursos que fez"]),
-      getCol(r, CARGO_KEYS),
-      getCol(r, ["Whatsapp", "WhatsApp", "Telefone", "Celular"]),
-      getCol(r, ["Email", "E-mail"]),
     );
   }
 

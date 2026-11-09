@@ -13,6 +13,7 @@ export interface SheetsData {
     iama: AlunoRow[];
   };
   fichaMatricula: AlunoRow[];
+  liveFichaMatricula?: AlunoRow[];
   formados: AlunoRow[];
   alunos10k: AlunoRow[];
   alunosDiamante: AlunoRow[];
@@ -102,8 +103,10 @@ export function useSheetsData() {
     queryFn: async (): Promise<SheetsData> => {
       const { data, error } = await supabase.functions.invoke("sheets-data");
       if (error) throw error;
+      const rawLiveFicha = (data as SheetsData).fichaMatricula ?? [];
       const merged = { ...(data as SheetsData) };
-      merged.fichaMatricula = mergeHistorical(merged.fichaMatricula ?? []);
+      merged.liveFichaMatricula = rawLiveFicha;
+      merged.fichaMatricula = mergeHistorical(rawLiveFicha);
       return merged;
     },
     staleTime: 10 * 60_000,
