@@ -10,9 +10,10 @@ import {
   Award,
   Users,
   Briefcase,
-  ExternalLink,
   GraduationCap,
   Sparkles,
+  ArrowRight,
+  CheckCircle2,
 } from "lucide-react";
 import { getCol, allPosRows, type SheetsData } from "@/lib/sheets";
 import { Input } from "@/components/ui/input";
@@ -58,18 +59,14 @@ export type B2BCompanyGroup = {
 const strip = (s: string) =>
   (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
-// --- Correção de encoding (mojibake / "?" no lugar de acentos) --------------
-const ENTIDADES: [RegExp, string][] = [
-  [/&aacute;/gi, "á"], [/&eacute;/gi, "é"], [/&iacute;/gi, "í"], [/&oacute;/gi, "ó"],
-  [/&uacute;/gi, "ú"], [/&atilde;/gi, "ã"], [/&otilde;/gi, "õ"], [/&ccedil;/gi, "ç"],
-  [/&acirc;/gi, "â"], [/&ecirc;/gi, "ê"], [/&ocirc;/gi, "ô"], [/&agrave;/gi, "à"],
-  [/&amp;/gi, "&"], [/&nbsp;/gi, " "],
-];
-
+// --- Correção de encoding e mojibake ---------------------------------------
 const MOJIBAKE: [RegExp, string][] = [
   [/Ã£/g, "ã"], [/Ãµ/g, "õ"], [/Ã§/g, "ç"], [/Ã¡/g, "á"], [/Ã©/g, "é"], [/Ã­/g, "í"],
   [/Ã³/g, "ó"], [/Ãº/g, "ú"], [/Ã¢/g, "â"], [/Ãª/g, "ê"], [/Ã´/g, "ô"], [/Ã /g, "à"],
   [/Ã‡/g, "Ç"], [/Ãƒ/g, "Ã"], [/Ã•/g, "Õ"], [/Â/g, ""],
+  [/&aacute;/gi, "á"], [/&eacute;/gi, "é"], [/&iacute;/gi, "í"], [/&oacute;/gi, "ó"],
+  [/&uacute;/gi, "ú"], [/&atilde;/gi, "ã"], [/&otilde;/gi, "õ"], [/&ccedil;/gi, "ç"],
+  [/&amp;/gi, "&"], [/&nbsp;/gi, " "],
 ];
 
 const PALAVRAS_ACENTO: [RegExp, string][] = [
@@ -82,31 +79,18 @@ const PALAVRAS_ACENTO: [RegExp, string][] = [
   [/\bSa\?de\b/gi, "Saúde"],
   [/\bEduca\?\?o\b/gi, "Educação"],
   [/\bGest\?o\b/gi, "Gestão"],
-  [/\bFunda\?\?o\b/gi, "Fundação"],
-  [/\bAssocia\?\?o\b/gi, "Associação"],
-  [/\bServi\?os?\b/gi, "Serviço"],
-  [/\bMunic\?pio\b/gi, "Município"],
-  [/\bEstadu\?l\b/gi, "Estadual"],
+  [/\bFundac\?o\b/gi, "Fundação"],
+  [/\bAssoc\?o\b/gi, "Associação"],
   [/\bAmbient\?l\b/gi, "Ambiental"],
-  [/\bInform\?tica\b/gi, "Informática"],
   [/\bTecnol\?gic([oa]s?)\b/gi, "Tecnológic$1"],
-  [/\bCi\?ncias?\b/gi, "Ciências"],
-  [/\bEnergi\?\b/gi, "Energia"],
-  [/\bConstru\?\?o\b/gi, "Construção"],
-  [/\bProdu\?\?o\b/gi, "Produção"],
-  [/\bRegi\?o\b/gi, "Região"],
-  [/\bJos\?\b/gi, "José"],
-  [/\bAnt\?nio\b/gi, "Antônio"],
-  [/\bMar\?a\b/gi, "Maria"],
   [/\bAgr\?cola\b/gi, "Agrícola"],
-  [/\bAn\?lises?\b/gi, "Análise"],
-  [/\bB\?sic([oa])\b/gi, "Básic$1"],
   [/\bT\?cnic([oa]s?)\b/gi, "Técnic$1"],
   [/\bP\?s[- ]?Gradua\?\?o\b/gi, "Pós-Graduação"],
   [/\bP\?s\b/gi, "Pós"],
   [/\bAgncia\b/gi, "Agência"],
   [/\bSanitria\b/gi, "Sanitária"],
   [/\bBrbaro\b/gi, "Bárbaro"],
+  [/\bB\?rbaro\b/gi, "Bárbaro"],
   [/\bJoo\b/gi, "João"],
   [/\b\?rg([aã]os?)\b/gi, "Órg$1"],
 ];
@@ -114,14 +98,12 @@ const PALAVRAS_ACENTO: [RegExp, string][] = [
 export function fixEncoding(raw: string): string {
   let t = raw ?? "";
   for (const [re, rep] of MOJIBAKE) t = t.replace(re, rep);
-  for (const [re, rep] of ENTIDADES) t = t.replace(re, rep);
   for (const [re, rep] of PALAVRAS_ACENTO) t = t.replace(re, rep as string);
   t = t.replace(/(\p{L})\?(\p{L})/gu, "$1$2");
   t = t.replace(/\uFFFD/g, "");
   return t.replace(/\s{2,}/g, " ").trim();
 }
 
-// --- Padronização de nomes de cursos ---------------------------------------
 export function normalizeCurso(raw: string): string {
   const t = fixEncoding(raw || "");
   const v = strip(t);
@@ -137,10 +119,10 @@ export function normalizeCurso(raw: string): string {
   if (v.includes("geodev")) return "GeoDev";
   if (v.includes("workshop") || v.includes("geoportal")) return "Workshop";
   if (v.includes("f2w") || v.includes("webgis") || v.includes("webapps")) return "F2W";
-  return t.length > 40 ? t.slice(0, 40).trim() + "…" : t;
+  return t.length > 35 ? t.slice(0, 35).trim() + "…" : t;
 }
 
-const INVALIDOS = [
+const INVALIDOS = new Set([
   "nao", "nao trabalho", "nenhum", "nenhuma", "autonomo", "autonoma", "n/a", "na", "-", "--",
   "sem empresa", "nao trabalho em empresa", "desempregado", "desempregada", "propria", "empresa propria",
   "nao no momento", "nao atualmente", "nao possuo", "freelancer", "estudante", "aposentado", "aposentada",
@@ -152,7 +134,8 @@ const INVALIDOS = [
   "minha empresa", "talvez", "ainda nao", "nao informado", "nd", "xxx", "teste", "desempregado no momento",
   "ainda nao trabalho", "nao trabalho no momento", "sem vinculo", "nao tenho", "nao tenho empresa",
   "atualmente em orgao publico", "atualmente em orgao", "atualmente em empresa", "orgao",
-];
+  "atualmente em ?rgo publico", "atualmente em orgo publico",
+]);
 
 const MINUSCULAS = new Set(["de", "da", "do", "das", "dos", "e", "em", "para", "a", "o", "no", "na"]);
 const SIGLAS = /^[A-Z0-9&./-]{2,6}$/;
@@ -205,6 +188,7 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
   let t = fixEncoding(raw || "").replace(/\s+/g, " ").trim().replace(/^["'`]+|["'`]+$/g, "").trim();
   if (!t) return { empresa: "" };
   if (/https?:\/\/|www\.|@/i.test(t)) return { empresa: "" };
+
   t = t.replace(/^(sim[,.\-–:]?\s*)+/i, "");
   t = t.replace(/^(trabalho|atuo|sou|sou atualmente|atuo como|trabalho como)\s+(na|no|em|para|pela|pelo|como)\s+/i, "");
   t = t.replace(/^(empresa|orgao|órgão|instituicao|instituição)\s*[:\-]\s*/i, "");
@@ -212,7 +196,7 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
 
   let cargo: string | undefined = undefined;
 
-  // Pattern: "Analista Ambiental, Prefeitura Municipal..." or "Consultor - Empresa X"
+  // Tratar padrões como "Analista Ambiental, Prefeitura Municipal..."
   const splitMatch = t.match(/^([A-Za-zÀ-ÿ\s]{3,35}?)[,–—\-]\s*(.+)$/);
   if (splitMatch) {
     const p1 = splitMatch[1].trim();
@@ -231,7 +215,7 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
     }
   }
 
-  // Frases descritivas de servidores
+  // Casos específicos de descrições
   if (/professor.*rede estadual.*s[aã]o paulo/i.test(t)) {
     return {
       empresa: "Secretaria da Educação do Estado de São Paulo",
@@ -252,8 +236,26 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
   if (t.replace(/[^\p{L}]/gu, "").length < 3) return { empresa: "" };
 
   const s = strip(t);
-  if (INVALIDOS.includes(s)) return { empresa: "" };
-  if (/^(nao|ainda nao|desempregad|sem empresa|nenhum)/.test(s)) return { empresa: "" };
+  if (
+    INVALIDOS.has(s) ||
+    s.startsWith("atualmente") ||
+    s.startsWith("sou atualmente") ||
+    s.startsWith("trabalho atualmente") ||
+    s.includes("orgao publico") ||
+    s.includes("orgo publico") ||
+    s.includes("?rgo") ||
+    s.includes("empresa publica") ||
+    s.includes("iniciativa privada") ||
+    s.includes("setor privado") ||
+    s.includes("setor publico") ||
+    s.includes("servidor publico") ||
+    s.includes("funcionario publico") ||
+    s.includes("nao trabalho") ||
+    s.includes("sem empresa") ||
+    s.includes("desempregad")
+  ) {
+    return { empresa: "" };
+  }
   if (t.split(" ").length > 10) return { empresa: "" };
 
   let formatted = t
@@ -263,7 +265,7 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
 
   formatted = formatted.replace(/\s+(S\/A|S\.A\.?|Sa|Ltda\.?|Me|Eireli)$/i, (m) => m.toUpperCase().replace("LTDA", "Ltda")).trim();
 
-  // Entidades públicas/privadas conhecidas para consolidação
+  // Consolidação de nomes canônicos conhecidos
   const fLow = strip(formatted);
   if (fLow === "icmbio" || fLow.includes("instituto chico mendes")) formatted = "ICMBio";
   else if (fLow === "ibama") formatted = "IBAMA";
@@ -282,18 +284,30 @@ function cleanEmpresaAndCargo(raw: string): { empresa: string; cargo?: string } 
   return { empresa: formatted, cargo };
 }
 
-const PUBLICO_KEYS = [
-  "prefeitura", "secretaria", "semad", "semma", "sema ", "ibama", "icmbio", "ministerio", "instituto",
-  "federal", "estadual", "municipal", "universidade", "embrapa", "incra", "funai", "governo", "camara",
-  "autarquia", "publico", "publica", "ufv", "ufmg", "usp", "ufrj", "ufpa", "ifpa", "if ", "iema", "inema",
-  "adema", "cetesb", "igam", "ana ", "dnit", "exercito", "policia", "batalhao", "conselho", "crea",
-  "fundacao", "agencia", "consorcio", "tribunal", "defesa civil", "sudam", "codevasf", "cprm", "epagri",
-  "emater", "idaf", "idam", "imasul", "inpe", "naturatins", "sedam", "semas", "sisema", "escola",
-];
+// Lista de palavras-chave públicas (com correspondência estrita por palavra inteira)
+const PUBLICO_WORDS = new Set([
+  "prefeitura", "secretaria", "semad", "semma", "sema", "ibama", "icmbio", "ministerio", "instituto",
+  "federal", "estadual", "municipal", "embrapa", "incra", "funai", "governo", "camara",
+  "autarquia", "publico", "publica", "ufv", "ufmg", "usp", "ufrj", "ufpa", "ifpa", "iema", "inema",
+  "adema", "cetesb", "igam", "ana", "dnit", "exercito", "policia", "batalhao", "crea",
+  "agencia", "consorcio", "tribunal", "defesa civil", "sudam", "codevasf", "cprm", "epagri",
+  "emater", "idaf", "idam", "imasul", "inpe", "naturatins", "sedam", "semas", "sisema"
+]);
 
 function isPublico(nome: string): boolean {
-  const v = " " + strip(nome) + " ";
-  return PUBLICO_KEYS.some((k) => v.includes(k));
+  const v = strip(nome);
+  // Associações civis, cooperativas e entidades de classe são da iniciativa privada
+  if (
+    v.includes("associacao") ||
+    v.includes("cooperativa") ||
+    v.includes("sindicato") ||
+    v.includes("produtores") ||
+    v.includes("fornecedores")
+  ) {
+    return false;
+  }
+  const words = v.split(/[^a-z0-9]+/);
+  return words.some((w) => PUBLICO_WORDS.has(w));
 }
 
 const CARGO_KEYS = [
@@ -404,8 +418,8 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
     );
   }
 
-  // Agrupa por aluno (nome e email unificados)
-  const byAluno = new Map<
+  // Deduplicação inteligente de aluno por E-mail -> Telefone -> Nome
+  const byStudentKey = new Map<
     string,
     {
       aluno: string;
@@ -418,9 +432,12 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
   >();
 
   for (const r of raws) {
-    const key = strip(r.aluno).replace(/\s+/g, " ");
-    if (!key) continue;
-    const cur = byAluno.get(key) ?? {
+    let key = "";
+    if (r.email) key = `e:${r.email}`;
+    else if (r.telefone) key = `p:${r.telefone.replace(/\D/g, "")}`;
+    else key = `n:${strip(r.aluno).replace(/[^a-z0-9]/g, "")}`;
+
+    const cur = byStudentKey.get(key) ?? {
       aluno: r.aluno,
       empresas: [],
       cargos: [],
@@ -428,6 +445,12 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
       emails: [],
       cursos: new Set<string>(),
     };
+
+    // Prioriza o nome com acentos corretos se o atual tiver caracteres truncados
+    if (r.aluno && (!cur.aluno || (!cur.aluno.includes("?") && r.aluno.length > cur.aluno.length))) {
+      cur.aluno = r.aluno;
+    }
+
     if (r.empresa) cur.empresas.push(r.empresa);
     if (r.cargo && !cur.cargos.includes(r.cargo)) cur.cargos.push(r.cargo);
     if (r.telefone && !cur.telefones.includes(r.telefone)) cur.telefones.push(r.telefone);
@@ -435,9 +458,10 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
     for (const c of r.curso.split(/[,;]/).map((x) => normalizeCurso(x)).filter(Boolean)) {
       cur.cursos.add(c);
     }
-    byAluno.set(key, cur);
+    byStudentKey.set(key, cur);
   }
 
+  // Escolhe a forma canônica da empresa
   const canonicalEmpresa = (list: string[]): string => {
     const counts = new Map<string, { nome: string; n: number }>();
     for (const e of list) {
@@ -460,7 +484,7 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
   };
 
   const out: B2BRow[] = [];
-  for (const v of byAluno.values()) {
+  for (const v of byStudentKey.values()) {
     const empresa = canonicalEmpresa(v.empresas);
     if (!empresa) continue;
     const cargo = v.cargos[0] || "";
@@ -481,7 +505,7 @@ export function buildB2BRows(data?: SheetsData): B2BRow[] {
 
 function exportCSV(rows: B2BRow[], filename: string) {
   const esc = (v: string) => `"${(v ?? "").replace(/"/g, '""')}"`;
-  const lines = ["Empresa/Órgão,Tipo,Aluno,Cargo,É Líder/Decisor,WhatsApp,E-mail,Cursos"];
+  const lines = ["Empresa/Órgão,Tipo,Colaborador,Cargo,É Líder/Decisor,WhatsApp,E-mail,Cursos"];
   for (const r of rows) {
     lines.push(
       [
@@ -505,19 +529,16 @@ function exportCSV(rows: B2BRow[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 10;
 
 export function B2BModule({ rows }: { rows: B2BRow[] }) {
   const [tab, setTab] = useState<"publico" | "privado" | "todos">("publico");
-  const [viewMode, setViewMode] = useState<"empresa" | "aluno">("empresa");
   const [q, setQ] = useState("");
   const [cursoFilter, setCursoFilter] = useState<string>("all");
-  const [somenteMulti, setSomenteMulti] = useState(false);
-  const [somenteLideres, setSomenteLideres] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedCompany, setSelectedCompany] = useState<B2BCompanyGroup | null>(null);
 
-  // Lista de todos os cursos presentes na base B2B para o filtro
+  // Cursos disponíveis na base para o filtro
   const cursosDisponiveis = useMemo(() => {
     const s = new Set<string>();
     for (const r of rows) {
@@ -526,18 +547,17 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
     return [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [rows]);
 
-  // Base filtrada por tipo (Público / Privado / Todos)
+  // Base filtrada por tipo de instituição (Público / Privado / Todos)
   const basePorTipo = useMemo(() => {
     if (tab === "todos") return rows;
     return rows.filter((r) => r.tipo === tab);
   }, [rows, tab]);
 
-  // Alunos individuais filtrados
+  // Alunos individuais filtrados pela busca e curso
   const alunosFiltrados = useMemo(() => {
     const s = strip(q);
     return basePorTipo.filter((r) => {
       if (cursoFilter !== "all" && !r.cursos.includes(cursoFilter)) return false;
-      if (somenteLideres && !r.isLider) return false;
       if (!s) return true;
       return (
         strip(r.empresa).includes(s) ||
@@ -546,9 +566,9 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
         strip(r.cursos.join(" ")).includes(s)
       );
     });
-  }, [basePorTipo, q, cursoFilter, somenteLideres]);
+  }, [basePorTipo, q, cursoFilter]);
 
-  // Empresas agrupadas com base nos filtros
+  // Agrupamento por empresa/órgão
   const empresasAgrupadas = useMemo<B2BCompanyGroup[]>(() => {
     const map = new Map<string, B2BRow[]>();
     for (const r of alunosFiltrados) {
@@ -559,8 +579,6 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
 
     const groups: B2BCompanyGroup[] = [];
     for (const [empresa, alunos] of map.entries()) {
-      if (somenteMulti && alunos.length < 2) continue;
-
       const cursos = [...new Set(alunos.flatMap((a) => a.cursos))].sort();
       const temLider = alunos.some((a) => a.isLider);
       const cargosCount = new Map<string, number>();
@@ -569,7 +587,7 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
       }
       const cargosSummary = [...cargosCount.entries()]
         .map(([c, n]) => (n > 1 ? `${n}x ${c}` : c))
-        .slice(0, 3)
+        .slice(0, 2)
         .join(", ");
 
       groups.push({
@@ -583,168 +601,84 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
       });
     }
 
-    // Ordena por quantidade de alunos decrescente, depois por nome
+    // Ordena as que têm mais alunos primeiro
     return groups.sort((a, b) => b.totalAlunos - a.totalAlunos || a.empresa.localeCompare(b.empresa, "pt-BR"));
-  }, [alunosFiltrados, somenteMulti]);
+  }, [alunosFiltrados]);
 
-  // Top empresas para os pills rápidos
-  const topEmpresas = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const r of basePorTipo) {
-      map.set(r.empresa, (map.get(r.empresa) ?? 0) + 1);
-    }
-    return [...map.entries()]
-      .filter(([, n]) => n > 1)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 7);
-  }, [basePorTipo]);
-
-  // KPIs de topo do bloco
+  // Estatísticas gerais
   const stats = useMemo(() => {
-    const totalAlunos = basePorTipo.length;
-    const empresasUnicas = new Set(basePorTipo.map((r) => r.empresa)).size;
-    const empresasMulti = [...new Set(basePorTipo.map((r) => r.empresa))].filter(
-      (emp) => basePorTipo.filter((r) => r.empresa === emp).length >= 2,
+    const publicas = new Set(rows.filter((r) => r.tipo === "publico").map((r) => r.empresa)).size;
+    const privadas = new Set(rows.filter((r) => r.tipo === "privado").map((r) => r.empresa)).size;
+    const total = publicas + privadas;
+    const multi = [...new Set(rows.map((r) => r.empresa))].filter(
+      (emp) => rows.filter((r) => r.empresa === emp).length >= 2,
     ).length;
-    const totalLideres = basePorTipo.filter((r) => r.isLider).length;
-    return { totalAlunos, empresasUnicas, empresasMulti, totalLideres };
-  }, [basePorTipo]);
+    return { publicas, privadas, total, multi };
+  }, [rows]);
 
-  // Paginação conforme modo ativo
-  const totalItems = viewMode === "empresa" ? empresasAgrupadas.length : alunosFiltrados.length;
-  const pages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  // Separação em: Contas Corporativas (2+ alunos) vs Demais Organizações (1 aluno)
+  const contasCorporativas = useMemo(() => {
+    return empresasAgrupadas.filter((g) => g.totalAlunos >= 2);
+  }, [empresasAgrupadas]);
+
+  const demaisEmpresas = useMemo(() => {
+    return empresasAgrupadas.filter((g) => g.totalAlunos === 1);
+  }, [empresasAgrupadas]);
+
+  // Paginação das demais empresas
+  const totalDemais = demaisEmpresas.length;
+  const pages = Math.max(1, Math.ceil(totalDemais / PAGE_SIZE));
   const current = Math.min(page, pages - 1);
-  const sliceEmpresas = empresasAgrupadas.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
-  const sliceAlunos = alunosFiltrados.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
+  const sliceDemais = demaisEmpresas.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE);
 
   return (
-    <section className="rounded-2xl border border-border bg-card/70 backdrop-blur-md p-5 space-y-5">
-      {/* Header do Módulo */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <section className="rounded-2xl border border-border bg-card/70 backdrop-blur-md p-6 space-y-6">
+      {/* ------------------------------------------------------------------ */}
+      {/* 1. CABEÇALHO LIMPO COM NAVEGAÇÃO PRINCIPAL                         */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-border/60 pb-5">
         <div>
-          <h2 className="text-lg font-bold flex items-center gap-2">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-foreground tracking-tight">
             <Building2 className="h-5 w-5 text-primary" />
             Mapeamento B2B & Institucional
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Inteligência de vínculos profissionais dos alunos da Ambiental Pro.
+          <p className="text-xs text-muted-foreground mt-1">
+            Vínculos profissionais dos alunos da Ambiental Pro ·{" "}
+            <span className="text-foreground font-semibold">{stats.total} organizações</span> mapeadas (
+            <span className="text-cyan-400 font-medium">{stats.publicas} públicas</span> ·{" "}
+            <span className="text-emerald-400 font-medium">{stats.privadas} privadas</span>) ·{" "}
+            <span className="text-primary font-semibold">{stats.multi} contas corporativas</span> (2+ alunos).
           </p>
         </div>
 
-        {/* Abas de Tipo: Órgãos Públicos / Empresas Privadas / Todos */}
+        {/* Abas Superiores de Filtro por Tipo */}
         <Tabs
           value={tab}
           onValueChange={(v) => {
             setTab(v as any);
             setPage(0);
           }}
+          className="shrink-0"
         >
-          <TabsList className="bg-muted/50 p-1">
+          <TabsList className="bg-muted/40 p-1 border border-border/60">
             <TabsTrigger value="publico" className="gap-1.5 text-xs">
-              <Landmark className="h-3.5 w-3.5" /> Órgãos Públicos
-              <span className="text-[10px] bg-background/60 px-1.5 py-0.2 rounded-full font-semibold">
-                {rows.filter((r) => r.tipo === "publico").length}
-              </span>
+              <Landmark className="h-3.5 w-3.5" /> Órgãos Públicos ({stats.publicas})
             </TabsTrigger>
             <TabsTrigger value="privado" className="gap-1.5 text-xs">
-              <Building2 className="h-3.5 w-3.5" /> Empresas Privadas
-              <span className="text-[10px] bg-background/60 px-1.5 py-0.2 rounded-full font-semibold">
-                {rows.filter((r) => r.tipo === "privado").length}
-              </span>
+              <Building2 className="h-3.5 w-3.5" /> Empresas Privadas ({stats.privadas})
             </TabsTrigger>
             <TabsTrigger value="todos" className="gap-1.5 text-xs">
-              Todos ({rows.length})
+              Todas ({stats.total})
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {/* Mini KPIs B2B */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="p-3.5 rounded-xl border border-border bg-muted/20">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Building2 className="h-3.5 w-3.5 text-primary" />
-            Organizações Mapeadas
-          </div>
-          <div className="text-2xl font-bold mt-1 text-foreground tabular-nums">
-            {stats.empresasUnicas}
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5">
-          <div className="text-xs text-primary flex items-center gap-1.5 font-medium">
-            <Flame className="h-3.5 w-3.5 text-primary" />
-            Contas com 2+ Alunos
-          </div>
-          <div className="text-2xl font-bold mt-1 text-primary tabular-nums">
-            {stats.empresasMulti}
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-xl border border-warning/20 bg-warning/5">
-          <div className="text-xs text-warning flex items-center gap-1.5 font-medium">
-            <Award className="h-3.5 w-3.5 text-warning" />
-            Líderes / Decisores
-          </div>
-          <div className="text-2xl font-bold mt-1 text-warning tabular-nums">
-            {stats.totalLideres}
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-xl border border-border bg-muted/20">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            Alunos com Vínculo
-          </div>
-          <div className="text-2xl font-bold mt-1 text-foreground tabular-nums">
-            {stats.totalAlunos}
-          </div>
-        </div>
-      </div>
-
-      {/* Top Pills de Organizações (Clicáveis para filtrar) */}
-      {topEmpresas.length > 0 && (
-        <div className="space-y-1.5">
-          <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-primary" /> Principais Contas Corporativas / Órgãos (clique para filtrar):
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {topEmpresas.map(([nome, n]) => {
-              const isActive = q.toLowerCase() === nome.toLowerCase();
-              return (
-                <button
-                  key={nome}
-                  onClick={() => {
-                    setQ(isActive ? "" : nome);
-                    setPage(0);
-                  }}
-                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-all ${
-                    isActive
-                      ? "border-primary bg-primary/20 text-primary font-semibold"
-                      : "border-border bg-background/50 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                  }`}
-                >
-                  <span className="font-medium">{nome}</span> ·{" "}
-                  <span className="font-semibold text-primary">{n} alunos</span>
-                </button>
-              );
-            })}
-            {q && (
-              <button
-                onClick={() => setQ("")}
-                className="text-[11px] px-2.5 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:text-foreground"
-              >
-                Limpar busca ({q})
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Barra de Filtros & Ações */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
-        {/* Campo de Busca */}
-        <div className="relative sm:col-span-2 lg:col-span-4">
+      {/* ------------------------------------------------------------------ */}
+      {/* 2. BARRA DE CONTROLE ÚNICA (BUSCA + CURSO + EXPORTAÇÃO)            */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center">
+        <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={q}
@@ -752,13 +686,12 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
               setQ(e.target.value);
               setPage(0);
             }}
-            placeholder="Buscar empresa, aluno, cargo ou curso…"
-            className="pl-9 h-9"
+            placeholder="Buscar por órgão, empresa, colaborador ou cargo..."
+            className="pl-9 h-10 text-sm bg-background/50"
           />
         </div>
 
-        {/* Filtro por Curso */}
-        <div className="sm:col-span-1 lg:col-span-3">
+        <div className="w-full sm:w-[220px]">
           <Select
             value={cursoFilter}
             onValueChange={(v) => {
@@ -766,7 +699,7 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
               setPage(0);
             }}
           >
-            <SelectTrigger className="h-9">
+            <SelectTrigger className="h-10 text-xs bg-background/50">
               <SelectValue placeholder="Filtrar por Curso" />
             </SelectTrigger>
             <SelectContent>
@@ -780,169 +713,188 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
           </Select>
         </div>
 
-        {/* Modo de Visualização: Empresas vs Alunos */}
-        <div className="sm:col-span-1 lg:col-span-3 flex items-center justify-start lg:justify-center">
-          <Tabs
-            value={viewMode}
-            onValueChange={(v) => {
-              setViewMode(v as any);
-              setPage(0);
-            }}
-            className="w-full"
-          >
-            <TabsList className="w-full bg-muted/50 p-0.5 h-9 grid grid-cols-2">
-              <TabsTrigger value="empresa" className="text-xs">
-                Por Empresa ({empresasAgrupadas.length})
-              </TabsTrigger>
-              <TabsTrigger value="aluno" className="text-xs">
-                Por Aluno ({alunosFiltrados.length})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {/* Botão de Exportação */}
-        <div className="sm:col-span-2 lg:col-span-2 flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full h-9 gap-1.5"
-            onClick={() => exportCSV(alunosFiltrados, `b2b-${tab}-${viewMode}.csv`)}
-            disabled={alunosFiltrados.length === 0}
-          >
-            <Download className="h-3.5 w-3.5" /> Exportar CSV
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-10 gap-2 shrink-0 w-full sm:w-auto"
+          onClick={() => exportCSV(alunosFiltrados, `b2b-${tab}.csv`)}
+          disabled={alunosFiltrados.length === 0}
+        >
+          <Download className="h-4 w-4" /> Exportar CSV
+        </Button>
       </div>
 
-      {/* Filtros Rápidos (Chips de Multi-Alunos e Líderes) */}
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <span className="text-xs text-muted-foreground">Filtros rápidos:</span>
+      {/* ------------------------------------------------------------------ */}
+      {/* 3. SEÇÃO PRINCIPAL: CONTAS CORPORATIVAS EM DESTAQUE (2+ ALUNOS)    */}
+      {/* ------------------------------------------------------------------ */}
+      {contasCorporativas.length > 0 && (
+        <div className="space-y-3.5 pt-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Flame className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground tracking-tight">
+                Contas Corporativas em Destaque (2 ou mais alunos)
+              </h3>
+              <Badge className="bg-primary/15 text-primary border-primary/30 text-[11px] font-semibold">
+                {contasCorporativas.length} organizações
+              </Badge>
+            </div>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              Alvos prioritários para treinamentos in-company e vendas B2B
+            </span>
+          </div>
 
-        <button
-          onClick={() => {
-            setSomenteMulti(!somenteMulti);
-            setPage(0);
-          }}
-          className={`text-xs px-2.5 py-1 rounded-md border transition-all flex items-center gap-1.5 ${
-            somenteMulti
-              ? "border-primary bg-primary/20 text-primary font-semibold"
-              : "border-border bg-background/50 text-muted-foreground hover:bg-muted/40"
-          }`}
-        >
-          <Flame className="h-3.5 w-3.5 text-primary" />
-          Apenas contas com 2+ alunos ({stats.empresasMulti})
-        </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {contasCorporativas.map((group) => {
+              const temLider = group.temLider;
+              return (
+                <div
+                  key={group.empresa}
+                  onClick={() => setSelectedCompany(group)}
+                  className="group relative rounded-xl border border-border bg-card/60 p-4 hover:border-primary/50 hover:bg-muted/30 transition-all cursor-pointer flex flex-col justify-between space-y-3 shadow-sm hover:shadow-md"
+                >
+                  <div>
+                    {/* Linha superior: Nome + Badges */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="font-bold text-foreground text-base group-hover:text-primary transition-colors leading-snug">
+                        {group.empresa}
+                      </div>
+                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs font-bold px-2 py-0.5 shrink-0">
+                        {group.totalAlunos} alunos
+                      </Badge>
+                    </div>
 
-        <button
-          onClick={() => {
-            setSomenteLideres(!somenteLideres);
-            setPage(0);
-          }}
-          className={`text-xs px-2.5 py-1 rounded-md border transition-all flex items-center gap-1.5 ${
-            somenteLideres
-              ? "border-warning bg-warning/20 text-warning font-semibold"
-              : "border-border bg-background/50 text-muted-foreground hover:bg-muted/40"
-          }`}
-        >
-          <Award className="h-3.5 w-3.5 text-warning" />
-          Apenas Líderes / Tomadores de Decisão ({stats.totalLideres})
-        </button>
+                    {/* Subtítulo: Tipo e Cargos */}
+                    <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap mb-2">
+                      <span className={`inline-block w-2 h-2 rounded-full ${
+                        group.tipo === "publico" ? "bg-cyan-400" : "bg-emerald-400"
+                      }`} />
+                      <span>{group.tipo === "publico" ? "Órgão Público" : "Empresa Privada"}</span>
+                      {temLider && (
+                        <span className="text-warning font-medium inline-flex items-center gap-0.5">
+                          · <Award className="h-3 w-3" /> com liderança
+                        </span>
+                      )}
+                    </div>
 
-        {(somenteMulti || somenteLideres || cursoFilter !== "all" || q) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => {
-              setSomenteMulti(false);
-              setSomenteLideres(false);
-              setCursoFilter("all");
-              setQ("");
-              setPage(0);
-            }}
-          >
-            Limpar filtros
-          </Button>
-        )}
-      </div>
+                    {/* Preview de Colaboradores */}
+                    <div className="text-xs text-muted-foreground line-clamp-1 mb-2">
+                      <span className="text-foreground/80 font-medium">Equipe:</span>{" "}
+                      {group.alunos.map((a) => a.aluno.split(" ")[0]).join(", ")}
+                    </div>
 
-      {/* =================================================================== */}
-      {/* MODO 1: TABELA POR EMPRESA / ÓRGÃO (AGRUPADA)                       */}
-      {/* =================================================================== */}
-      {viewMode === "empresa" && (
-        <div className="rounded-lg border border-border overflow-hidden">
+                    {/* Cursos em Tags */}
+                    <div className="flex flex-wrap gap-1">
+                      {group.cursos.slice(0, 3).map((c) => (
+                        <span
+                          key={c}
+                          className="text-[10px] px-2 py-0.5 rounded-full border border-border/80 bg-background/60 text-muted-foreground"
+                        >
+                          {c}
+                        </span>
+                      ))}
+                      {group.cursos.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground self-center">
+                          +{group.cursos.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Botão de Ação no Card */}
+                  <div className="pt-2 border-t border-border/40 flex items-center justify-between text-xs text-primary font-medium group-hover:translate-x-0.5 transition-transform">
+                    <span>Ver colaboradores & contatos</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------ */}
+      {/* 4. SEÇÃO: TODAS AS DEMAIS ORGANIZAÇÕES MAPEADAS                     */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground tracking-tight">
+              {contasCorporativas.length > 0 ? "Demais Organizações Mapeadas" : "Organizações Encontradas"}
+            </h3>
+            <span className="text-xs text-muted-foreground">
+              ({demaisEmpresas.length} instituições)
+            </span>
+          </div>
+
+          <span className="text-xs text-muted-foreground">
+            Página {current + 1} de {pages}
+          </span>
+        </div>
+
+        <div className="rounded-xl border border-border overflow-hidden bg-card/40">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead className="bg-muted/40 border-b border-border">
               <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-3.5 py-2.5 font-medium">Empresa / Órgão</th>
-                <th className="px-3 py-2.5 font-medium text-center">Alunos</th>
-                <th className="px-3.5 py-2.5 font-medium hidden md:table-cell">Cargos Mapeados</th>
-                <th className="px-3 py-2.5 font-medium hidden lg:table-cell">Cursos</th>
-                <th className="px-3 py-2.5 font-medium text-right">Ação</th>
+                <th className="px-4 py-3 font-semibold">Organização</th>
+                <th className="px-4 py-3 font-semibold">Colaborador(a) & Cargo</th>
+                <th className="px-4 py-3 font-semibold hidden md:table-cell">Cursos</th>
+                <th className="px-4 py-3 font-semibold text-right">Contato Direto</th>
               </tr>
             </thead>
-            <tbody>
-              {sliceEmpresas.length === 0 ? (
+            <tbody className="divide-y divide-border/60">
+              {sliceDemais.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-xs text-muted-foreground">
-                    Nenhuma organização encontrada com os filtros selecionados.
+                  <td colSpan={4} className="px-4 py-10 text-center text-xs text-muted-foreground">
+                    Nenhuma organização encontrada para este filtro.
                   </td>
                 </tr>
               ) : (
-                sliceEmpresas.map((group) => {
-                  const isHot = group.totalAlunos >= 2;
+                sliceDemais.map((group) => {
+                  const aluno = group.alunos[0];
+                  if (!aluno) return null;
+                  const phoneDigits = aluno.telefone.replace(/\D/g, "");
+                  const waLink = phoneDigits
+                    ? `https://wa.me/${phoneDigits.length <= 11 ? "55" + phoneDigits : phoneDigits}`
+                    : "";
+
                   return (
                     <tr
                       key={group.empresa}
-                      className="border-t border-border hover:bg-muted/30 align-middle transition-colors cursor-pointer"
-                      onClick={() => setSelectedCompany(group)}
+                      className="hover:bg-muted/20 transition-colors align-middle"
                     >
-                      <td className="px-3.5 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-foreground text-sm">
-                            {group.empresa}
-                          </span>
-                          {group.tipo === "publico" ? (
-                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-cyan-500/30 text-cyan-400 bg-cyan-500/10">
-                              Público
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-emerald-500/30 text-emerald-400 bg-emerald-500/10">
-                              Privado
-                            </Badge>
-                          )}
-                          {isHot && (
-                            <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px] py-0 px-1.5 flex items-center gap-1">
-                              <Flame className="h-3 w-3" /> Conta Quente
-                            </Badge>
-                          )}
-                          {group.temLider && (
-                            <Badge className="bg-warning/20 text-warning border-warning/30 text-[10px] py-0 px-1.5 flex items-center gap-1">
-                              <Award className="h-3 w-3" /> Líder
+                      {/* Empresa */}
+                      <td className="px-4 py-3">
+                        <div className="font-semibold text-foreground text-sm">{group.empresa}</div>
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${
+                            group.tipo === "publico" ? "bg-cyan-400" : "bg-emerald-400"
+                          }`} />
+                          {group.tipo === "publico" ? "Órgão Público" : "Empresa Privada"}
+                        </div>
+                      </td>
+
+                      {/* Aluno & Cargo */}
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-foreground text-sm">{aluno.aluno}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          {aluno.cargo ? <span>{aluno.cargo}</span> : <span className="opacity-50">Cargo não informado</span>}
+                          {aluno.isLider && (
+                            <Badge className="bg-warning/20 text-warning border-warning/30 text-[9px] py-0 px-1 ml-1 font-semibold">
+                              🎖️ Líder
                             </Badge>
                           )}
                         </div>
                       </td>
 
-                      <td className="px-3 py-3 text-center">
-                        <span className={`inline-flex items-center justify-center font-bold px-2 py-0.5 rounded-full text-xs ${
-                          isHot ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                        }`}>
-                          {group.totalAlunos}
-                        </span>
-                      </td>
-
-                      <td className="px-3.5 py-3 text-xs text-muted-foreground hidden md:table-cell max-w-[280px] truncate">
-                        {group.cargosSummary || "—"}
-                      </td>
-
-                      <td className="px-3 py-3 hidden lg:table-cell">
+                      {/* Cursos */}
+                      <td className="px-4 py-3 hidden md:table-cell">
                         <div className="flex flex-wrap gap-1">
                           {group.cursos.map((c) => (
                             <span
                               key={c}
-                              className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-background/50 text-muted-foreground"
+                              className="text-[10px] px-2 py-0.5 rounded-full border border-border/80 bg-background/50 text-muted-foreground"
                             >
                               {c}
                             </span>
@@ -950,123 +902,32 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
                         </div>
                       </td>
 
-                      <td className="px-3 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 text-xs gap-1 text-primary hover:bg-primary/10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedCompany(group);
-                          }}
-                        >
-                          <Users className="h-3.5 w-3.5" />
-                          Ver Alunos ({group.totalAlunos})
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* =================================================================== */}
-      {/* MODO 2: TABELA POR ALUNO (LISTAGEM DETALHADA)                       */}
-      {/* =================================================================== */}
-      {viewMode === "aluno" && (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40">
-              <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-3.5 py-2.5 font-medium">Empresa / Órgão</th>
-                <th className="px-3.5 py-2.5 font-medium">Aluno</th>
-                <th className="px-3.5 py-2.5 font-medium hidden sm:table-cell">Cargo / Função</th>
-                <th className="px-3.5 py-2.5 font-medium">Contato</th>
-                <th className="px-3.5 py-2.5 font-medium hidden lg:table-cell">Cursos</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sliceAlunos.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-xs text-muted-foreground">
-                    Nenhum aluno encontrado com os filtros selecionados.
-                  </td>
-                </tr>
-              ) : (
-                sliceAlunos.map((r, i) => {
-                  const phoneDigits = r.telefone.replace(/\D/g, "");
-                  const waLink = phoneDigits
-                    ? `https://wa.me/${phoneDigits.length <= 11 ? "55" + phoneDigits : phoneDigits}`
-                    : "";
-
-                  return (
-                    <tr key={`${r.aluno}-${i}`} className="border-t border-border hover:bg-muted/30 align-middle">
-                      <td className="px-3.5 py-2.5">
-                        <div className="font-medium text-foreground text-sm">{r.empresa}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {r.tipo === "publico" ? "Órgão Público" : "Empresa Privada"}
-                        </div>
-                      </td>
-
-                      <td className="px-3.5 py-2.5 font-medium text-foreground text-sm">
-                        {r.aluno}
-                      </td>
-
-                      <td className="px-3.5 py-2.5 hidden sm:table-cell text-xs">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-muted-foreground">{r.cargo || "—"}</span>
-                          {r.isLider && (
-                            <Badge className="bg-warning/20 text-warning border-warning/30 text-[10px] py-0 px-1.5">
-                              🎖️ Líder / Decisor
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="px-3.5 py-2.5">
-                        <div className="flex items-center gap-2">
+                      {/* Contato WhatsApp / Email */}
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-2 justify-end">
                           {phoneDigits ? (
                             <a
                               href={waLink}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-mono"
-                              title="Abrir no WhatsApp"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all hover:scale-105"
+                              title="Abrir conversa no WhatsApp"
                             >
                               <Phone className="h-3.5 w-3.5" />
-                              {r.telefone}
+                              WhatsApp
                             </a>
                           ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground opacity-40">Sem telefone</span>
                           )}
-                          {r.email && (
-                            <a
-                              href={`mailto:${r.email}`}
-                              className="text-muted-foreground hover:text-foreground inline-flex items-center"
-                              title={r.email}
-                            >
-                              <Mail className="h-3.5 w-3.5" />
-                            </a>
-                          )}
-                        </div>
-                      </td>
 
-                      <td className="px-3.5 py-2.5 hidden lg:table-cell">
-                        <div className="flex flex-wrap gap-1">
-                          {r.cursos.length === 0 ? (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          ) : (
-                            r.cursos.map((c) => (
-                              <span
-                                key={c}
-                                className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-background/50 text-muted-foreground"
-                              >
-                                {c}
-                              </span>
-                            ))
+                          {aluno.email && (
+                            <a
+                              href={`mailto:${aluno.email}`}
+                              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                              title={aluno.email}
+                            >
+                              <Mail className="h-4 w-4" />
+                            </a>
                           )}
                         </div>
                       </td>
@@ -1077,42 +938,46 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
             </tbody>
           </table>
         </div>
-      )}
 
-      {/* Paginação */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-        <span>
-          {totalItems} {viewMode === "empresa" ? "organizações" : "alunos"} · página {current + 1} de {pages}
-        </span>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={current === 0}
-            onClick={() => setPage(current - 1)}
-          >
-            Anterior
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={current >= pages - 1}
-            onClick={() => setPage(current + 1)}
-          >
-            Próxima
-          </Button>
-        </div>
+        {/* Paginação da Tabela */}
+        {demaisEmpresas.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+            <span>
+              Mostrando {sliceDemais.length} de {demaisEmpresas.length} organizações
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={current === 0}
+                onClick={() => setPage(current - 1)}
+                className="h-8 text-xs"
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={current >= pages - 1}
+                onClick={() => setPage(current + 1)}
+                className="h-8 text-xs"
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* =================================================================== */}
-      {/* DIALOG: ALUNOS DA EMPRESA SELECIONADA                               */}
-      {/* =================================================================== */}
+      {/* ------------------------------------------------------------------ */}
+      {/* 5. GAVETA / MODAL DE CONTATOS DA ORGANIZAÇÃO SELECIONADA           */}
+      {/* ------------------------------------------------------------------ */}
       <Dialog open={!!selectedCompany} onOpenChange={(open) => !open && setSelectedCompany(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col p-6">
+          <DialogHeader className="border-b border-border/60 pb-4">
             <div className="flex items-center justify-between gap-3 pr-6">
               <div>
-                <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                <DialogTitle className="text-xl font-bold flex items-center gap-2">
                   {selectedCompany?.tipo === "publico" ? (
                     <Landmark className="h-5 w-5 text-cyan-400" />
                   ) : (
@@ -1120,8 +985,8 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
                   )}
                   {selectedCompany?.empresa}
                 </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  {selectedCompany?.totalAlunos} aluno{selectedCompany?.totalAlunos === 1 ? "" : "s"} vinculado{selectedCompany?.totalAlunos === 1 ? "" : "s"} ·{" "}
+                <DialogDescription className="text-xs text-muted-foreground mt-1">
+                  {selectedCompany?.totalAlunos} colaboradores identificados ·{" "}
                   {selectedCompany?.tipo === "publico" ? "Órgão Público" : "Empresa Privada"}
                 </DialogDescription>
               </div>
@@ -1134,17 +999,18 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
                   onClick={() =>
                     exportCSV(
                       selectedCompany.alunos,
-                      `alunos-${selectedCompany.empresa.toLowerCase().replace(/[^a-z0-9]/g, "-")}.csv`,
+                      `colaboradores-${selectedCompany.empresa.toLowerCase().replace(/[^a-z0-9]/g, "-")}.csv`,
                     )
                   }
                 >
-                  <Download className="h-3 w-3" /> Exportar CSV
+                  <Download className="h-3 w-3" /> Exportar Lista
                 </Button>
               )}
             </div>
           </DialogHeader>
 
-          <div className="overflow-y-auto space-y-3 py-2 pr-1 flex-1">
+          {/* Lista de Colaboradores com botão WhatsApp grande e direto */}
+          <div className="overflow-y-auto space-y-3 py-3 pr-1 flex-1">
             {selectedCompany?.alunos.map((a, i) => {
               const phoneDigits = a.telefone.replace(/\D/g, "");
               const waLink = phoneDigits
@@ -1154,55 +1020,64 @@ export function B2BModule({ rows }: { rows: B2BRow[] }) {
               return (
                 <div
                   key={`${a.aluno}-${i}`}
-                  className="p-3.5 rounded-xl border border-border bg-card/60 hover:bg-muted/20 transition-colors space-y-2"
+                  className="p-4 rounded-xl border border-border bg-card/60 hover:bg-muted/20 transition-colors space-y-2.5"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-foreground text-sm">{a.aluno}</span>
-                      {a.cargo && (
-                        <span className="text-xs text-muted-foreground">({a.cargo})</span>
-                      )}
-                      {a.isLider && (
-                        <Badge className="bg-warning/20 text-warning border-warning/30 text-[10px] py-0 px-1.5 flex items-center gap-1">
-                          🎖️ Líder / Decisor
-                        </Badge>
-                      )}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-foreground text-sm">{a.aluno}</span>
+                        {a.isLider && (
+                          <Badge className="bg-warning/20 text-warning border-warning/30 text-[10px] py-0 px-1.5 font-semibold">
+                            🎖️ Tomador de Decisão / Líder
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {a.cargo || "Cargo não informado"}
+                      </div>
                     </div>
 
+                    {/* Botão de WhatsApp em destaque */}
                     <div className="flex items-center gap-2">
-                      {phoneDigits && (
+                      {phoneDigits ? (
                         <a
                           href={waLink}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all hover:scale-105"
                         >
-                          <Phone className="h-3 w-3" /> Falar no WhatsApp
+                          <Phone className="h-3.5 w-3.5" /> Chamar no WhatsApp
                         </a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sem telefone</span>
                       )}
+
                       {a.email && (
                         <a
                           href={`mailto:${a.email}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground border border-border hover:bg-muted/40 transition-colors"
+                          title={a.email}
                         >
-                          <Mail className="h-3 w-3" /> E-mail
+                          <Mail className="h-3.5 w-3.5" />
                         </a>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
-                    <span className="text-muted-foreground text-[11px] flex items-center gap-1">
-                      <GraduationCap className="h-3 w-3" /> Cursos:
-                    </span>
-                    {a.cursos.map((c) => (
-                      <span
-                        key={c}
-                        className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-background/70 text-foreground font-medium"
-                      >
-                        {c}
-                      </span>
-                    ))}
+                  {/* Cursos feitos por este aluno */}
+                  <div className="flex items-center gap-1.5 pt-1 border-t border-border/40 text-xs text-muted-foreground">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    <span>Cursos realizados:</span>
+                    <div className="flex flex-wrap gap-1 ml-1">
+                      {a.cursos.map((c) => (
+                        <span
+                          key={c}
+                          className="text-[10px] px-2 py-0.5 rounded-full border border-border bg-background/80 text-foreground font-medium"
+                        >
+                          {c}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
               );
