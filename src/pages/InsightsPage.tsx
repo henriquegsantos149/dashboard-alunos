@@ -59,8 +59,13 @@ import {
   Sparkles,
   HandCoins,
   Pause,
+  MessageSquareQuote,
+  Phone,
+  AlertTriangle,
   type LucideIcon,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   useSheetsData,
 
@@ -72,7 +77,7 @@ import {
   fichaMatriculaPosMba,
 } from "@/lib/sheets";
 import { ChartCard } from "@/components/Charts";
-import { B2BModule, buildB2BRows } from "@/components/B2BModule";
+import { B2BModule, buildB2BRows, normalizeCurso, formatPhone } from "@/components/B2BModule";
 import { PALETTE, CURSO_COLORS as SHARED_CURSO_COLORS, SCALE_QUALITY, ATUACAO_COLORS, TIPO_INST_COLORS } from "@/lib/chartColors";
 import oldFormDataRaw from "@/data/oldForm.json";
 
@@ -179,6 +184,11 @@ export default function InsightsPage() {
   const [cursoImpacto, setCursoImpacto] = useState<string>("all");
   const [cursoEng, setCursoEng] = useState<string>("all");
   const [detail, setDetail] = useState<{ title: string; subtitle: string; students: { nome: string; telefone: string }[] } | null>(null);
+
+  const [desafiosCurso, setDesafiosCurso] = useState<string>("all");
+  const [outroModalOpen, setOutroModalOpen] = useState(false);
+  const [outroSearch, setOutroSearch] = useState("");
+  const [outroModalCurso, setOutroModalCurso] = useState("all");
 
   const b2bRows = useMemo(() => buildB2BRows(data), [data]);
 
@@ -481,6 +491,166 @@ export default function InsightsPage() {
       .slice(0, 8)
       .map(([name, value], i) => ({ name, value, color: PALETTE[i % PALETTE.length] }));
   }, [data]);
+
+  // 6.1. Principal Desafio Profissional (Ruminações Mentais)
+  type OutroItem = {
+    aluno: string;
+    curso: string;
+    telefone: string;
+    email: string;
+    texto: string;
+  };
+
+  const DESAFIO_COLS = [
+    "Qual é o seu principal desafio profissional hoje?",
+    "Qual o seu principal desafio profissional hoje?",
+    "Qual é o seu principal desafio profissional hoje",
+    "Qual o seu principal desafio profissional hoje",
+    "principal desafio profissional hoje",
+    "principal desafio profissional",
+    "desafio profissional hoje",
+    "desafio profissional",
+  ];
+
+  const DESAFIOS_CONFIG = [
+    {
+      id: "travar",
+      label: "Medo de travar no projeto",
+      color: "hsl(0 72% 51%)",
+      match: (v: string) => v.includes("travar no projeto") || (v.includes("travar") && v.includes("projeto")) || v.includes("medo de travar"),
+    },
+    {
+      id: "estagnacao",
+      label: "Sensação de estagnação na carreira",
+      color: "hsl(262 83% 58%)",
+      match: (v: string) => v.includes("estagnacao") || v.includes("estagnada") || v.includes("estagnado"),
+    },
+    {
+      id: "clientes",
+      label: "Incerteza sobre como conseguir clientes",
+      color: "hsl(142 71% 45%)",
+      match: (v: string) => v.includes("conseguir cliente") || v.includes("como conseguir") || v.includes("incerteza"),
+    },
+    {
+      id: "manual",
+      label: "Trabalho manual e ultrapassado",
+      color: "hsl(38 92% 50%)",
+      match: (v: string) => v.includes("manual e ultrapassado") || v.includes("trabalho manual") || v.includes("ultrapassado"),
+    },
+    {
+      id: "dados",
+      label: "Dificuldade na gestão de dados",
+      color: "hsl(199 89% 48%)",
+      match: (v: string) => (v.includes("gestao") && v.includes("dados")) || v.includes("gestao de dado"),
+    },
+    {
+      id: "autoridade",
+      label: "Falta de autoridade técnica",
+      color: "hsl(330 81% 60%)",
+      match: (v: string) => v.includes("autoridade tecnica") || v.includes("autoridade"),
+    },
+    {
+      id: "legislacao",
+      label: "Insegurança com a legislação/normas",
+      color: "hsl(25 95% 53%)",
+      match: (v: string) => v.includes("legislacao") || v.includes("normas") || v.includes("inseguranca"),
+    },
+  ];
+
+  const DESAFIOS_CURSO_OPTIONS = [
+    "Pós-GGSR",
+    "Pós-ALPA",
+    "Pós-GRAC",
+    "Pós-IA.MA",
+    "MBA",
+    "PAP",
+    "Python GeoDev",
+    "F2W",
+    "Workshop",
+  ];
+
+  const desafiosStats = useMemo(() => {
+    if (!data) return { items: [], total: 0, outros: [] as OutroItem[] };
+    const counts = new Map<string, number>();
+    DESAFIOS_CONFIG.forEach((d) => counts.set(d.id, 0));
+    counts.set("outro", 0);
+
+    const outrosList: OutroItem[] = [];
+
+    for (const r of data.fichaMatricula) {
+      const raw = getCol(r, DESAFIO_COLS).trim();
+      if (!raw) continue;
+
+      const curso = normalizeCurso(getCol(r, ["Você se matriculou em qual das nossas formações?"]));
+      if (desafiosCurso !== "all" && curso !== desafiosCurso) continue;
+
+      const v = stripAccents(raw);
+      const matched = DESAFIOS_CONFIG.find((d) => d.match(v));
+
+      if (matched) {
+        counts.set(matched.id, (counts.get(matched.id) ?? 0) + 1);
+      } else {
+        // Aluno selecionou "Outro" e digitou livremente
+        counts.set("outro", (counts.get("outro") ?? 0) + 1);
+        outrosList.push({
+          aluno: getCol(r, ["Qual o seu nome?", "Nome"]).trim() || "Aluno",
+          curso: curso || "Geral",
+          telefone: getCol(r, ["Qual o seu Whatsapp (com DDD)?", "Whatsapp", "WhatsApp"]),
+          email: getCol(r, ["Qual o e-mail que você utilizou na sua matrícula?", "E-mail", "Email"]),
+          texto: raw,
+        });
+      }
+    }
+
+    const total = Array.from(counts.values()).reduce((a, b) => a + b, 0);
+
+    const items = [
+      ...DESAFIOS_CONFIG.map((d) => ({
+        id: d.id,
+        name: d.label,
+        value: counts.get(d.id) ?? 0,
+        color: d.color,
+        isOutro: false,
+      })),
+      {
+        id: "outro",
+        name: "Outro (Respostas abertas)",
+        value: counts.get("outro") ?? 0,
+        color: "hsl(215 20% 65%)",
+        isOutro: true,
+      },
+    ].sort((a, b) => b.value - a.value);
+
+    return { items, total, outros: outrosList };
+  }, [data, desafiosCurso]);
+
+  const outrosFiltrados = useMemo(() => {
+    return desafiosStats.outros.filter((item) => {
+      if (outroModalCurso !== "all" && item.curso !== outroModalCurso) return false;
+      if (!outroSearch) return true;
+      const s = stripAccents(outroSearch);
+      return (
+        stripAccents(item.texto).includes(s) ||
+        stripAccents(item.aluno).includes(s) ||
+        stripAccents(item.curso).includes(s)
+      );
+    });
+  }, [desafiosStats.outros, outroModalCurso, outroSearch]);
+
+  const exportOutrosCSV = () => {
+    const esc = (v: string) => `"${(v ?? "").replace(/"/g, '""')}"`;
+    const lines = ["Aluno,Curso,WhatsApp,E-mail,Resposta Aberta (Outro)"];
+    for (const r of outrosFiltrados) {
+      lines.push([esc(r.aluno), esc(r.curso), esc(r.telefone), esc(r.email), esc(r.texto)].join(","));
+    }
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `desafios-respostas-abertas-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // 7. Avaliação do curso (ficha de Formados)
   const avaliacao = useMemo(() => {
@@ -964,49 +1134,258 @@ export default function InsightsPage() {
         </ChartCard>
       </section>
 
-      <ChartCard
-        title="Objetivos ao se Capacitar"
-        description={`Top motivos declarados nas fichas de matrícula (${objetivos.reduce((s, o) => s + o.value, 0)} menções)`}
-        height={360}
-      >
-        {objetivos.length === 0 ? (
-          <div className="h-full grid place-items-center text-xs text-muted-foreground">
-            {isLoading ? "Carregando…" : "Sem dados"}
-          </div>
-        ) : (
-          <div className="h-full overflow-auto pr-1 space-y-2">
-            {(() => {
-              const totalO = objetivos.reduce((s, o) => s + o.value, 0);
-              const maxO = Math.max(...objetivos.map((o) => o.value));
-              return objetivos.map((o, i) => {
-                const pct = totalO > 0 ? (o.value / totalO) * 100 : 0;
-                const barW = maxO > 0 ? (o.value / maxO) * 100 : 0;
-                return (
-                  <div key={o.name} className="group flex items-center gap-3 py-1">
-                    <div className="w-5 text-xs text-muted-foreground tabular-nums text-right shrink-0">{i + 1}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2 mb-1">
-                        <div className="text-sm text-foreground truncate">{o.name}</div>
-                        <div className="text-xs tabular-nums shrink-0">
-                          <span className="font-semibold text-foreground">{o.value}</span>
-                          <span className="text-muted-foreground"> · {pct.toFixed(1)}%</span>
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <ChartCard
+          title="Objetivos ao se Capacitar"
+          description={`Top motivos declarados nas fichas de matrícula (${objetivos.reduce((s, o) => s + o.value, 0)} menções)`}
+          height={380}
+        >
+          {objetivos.length === 0 ? (
+            <div className="h-full grid place-items-center text-xs text-muted-foreground">
+              {isLoading ? "Carregando…" : "Sem dados"}
+            </div>
+          ) : (
+            <div className="h-full overflow-auto pr-1 space-y-2">
+              {(() => {
+                const totalO = objetivos.reduce((s, o) => s + o.value, 0);
+                const maxO = Math.max(...objetivos.map((o) => o.value));
+                return objetivos.map((o, i) => {
+                  const pct = totalO > 0 ? (o.value / totalO) * 100 : 0;
+                  const barW = maxO > 0 ? (o.value / maxO) * 100 : 0;
+                  return (
+                    <div key={o.name} className="group flex items-center gap-3 py-1">
+                      <div className="w-5 text-xs text-muted-foreground tabular-nums text-right shrink-0">{i + 1}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2 mb-1">
+                          <div className="text-sm text-foreground truncate">{o.name}</div>
+                          <div className="text-xs tabular-nums shrink-0">
+                            <span className="font-semibold text-foreground">{o.value}</span>
+                            <span className="text-muted-foreground"> · {pct.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500 group-hover:opacity-90"
+                            style={{ width: `${barW}%`, background: o.color }}
+                          />
                         </div>
                       </div>
-                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500 group-hover:opacity-90"
-                          style={{ width: `${barW}%`, background: o.color }}
-                        />
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Principal Desafio Profissional (Ruminações)"
+          description={`Dores e inseguranças declaradas nas matrículas (${desafiosStats.total} respostas)`}
+          height={380}
+          action={
+            <div className="flex items-center gap-2">
+              <Select value={desafiosCurso} onValueChange={setDesafiosCurso}>
+                <SelectTrigger className="h-8 w-[130px] text-xs">
+                  <SelectValue placeholder="Curso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os cursos</SelectItem>
+                  {DESAFIOS_CURSO_OPTIONS.map((c) => (
+                    <SelectItem key={c} value={c} className="text-xs">
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {desafiosStats.outros.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                  onClick={() => setOutroModalOpen(true)}
+                  title="Ver respostas abertas do campo Outro"
+                >
+                  <MessageSquareQuote className="h-3.5 w-3.5" />
+                  Ver &ldquo;Outro&rdquo; ({desafiosStats.outros.length})
+                </Button>
+              )}
+            </div>
+          }
+        >
+          {desafiosStats.total === 0 ? (
+            <div className="h-full grid place-items-center text-xs text-muted-foreground p-6 text-center">
+              {isLoading
+                ? "Carregando…"
+                : "Aguardando respostas desta pergunta para o filtro selecionado."}
+            </div>
+          ) : (
+            <div className="h-full overflow-auto pr-1 space-y-2">
+              {(() => {
+                const totalD = desafiosStats.total;
+                const maxD = Math.max(...desafiosStats.items.map((o) => o.value));
+                return desafiosStats.items.map((o, i) => {
+                  const pct = totalD > 0 ? (o.value / totalD) * 100 : 0;
+                  const barW = maxD > 0 ? (o.value / maxD) * 100 : 0;
+                  const isClickable = o.isOutro && o.value > 0;
+
+                  return (
+                    <div
+                      key={o.id}
+                      className={`group flex items-center gap-3 py-1 rounded-md px-1 transition-colors ${
+                        isClickable ? "hover:bg-primary/5 cursor-pointer" : ""
+                      }`}
+                      onClick={() => {
+                        if (isClickable) setOutroModalOpen(true);
+                      }}
+                    >
+                      <div className="w-5 text-xs text-muted-foreground tabular-nums text-right shrink-0">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline justify-between gap-2 mb-1">
+                          <div className="text-sm text-foreground truncate flex items-center gap-1.5">
+                            {o.name}
+                            {isClickable && (
+                              <span className="text-[10px] text-primary hover:underline font-normal inline-flex items-center gap-0.5 ml-1">
+                                💬 ver respostas ({o.value})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs tabular-nums shrink-0">
+                            <span className="font-semibold text-foreground">{o.value}</span>
+                            <span className="text-muted-foreground"> · {pct.toFixed(1)}%</span>
+                          </div>
+                        </div>
+                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500 group-hover:opacity-90"
+                            style={{ width: `${barW}%`, background: o.color }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+        </ChartCard>
+      </section>
+
+      {/* Dialog Modal para ler o que os alunos escreveram em "Outro" */}
+      <Dialog open={outroModalOpen} onOpenChange={setOutroModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <div className="flex items-center justify-between gap-3 pr-6">
+              <div>
+                <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                  <MessageSquareQuote className="h-5 w-5 text-primary" />
+                  Respostas Abertas de &ldquo;Outro&rdquo; ({outrosFiltrados.length})
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                  Dores e desafios profissionais descritos pelos alunos em suas próprias palavras.
+                </DialogDescription>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-8"
+                onClick={exportOutrosCSV}
+                disabled={outrosFiltrados.length === 0}
+              >
+                <Download className="h-3.5 w-3.5" /> Exportar CSV
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {/* Search & Filter */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                value={outroSearch}
+                onChange={(e) => setOutroSearch(e.target.value)}
+                placeholder="Buscar palavra-chave (ex: tempo, cliente, medo)..."
+                className="pl-8 h-8 text-xs"
+              />
+            </div>
+
+            <Select value={outroModalCurso} onValueChange={setOutroModalCurso}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Filtrar por curso" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os cursos</SelectItem>
+                {DESAFIOS_CURSO_OPTIONS.map((c) => (
+                  <SelectItem key={c} value={c} className="text-xs">
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Listagem de cards de depoimentos */}
+          <div className="overflow-y-auto space-y-3 py-3 pr-1 flex-1">
+            {outrosFiltrados.length === 0 ? (
+              <div className="text-center py-10 text-xs text-muted-foreground">
+                Nenhuma resposta aberta encontrada com os filtros atuais.
+              </div>
+            ) : (
+              outrosFiltrados.map((item, i) => {
+                const phoneDigits = (item.telefone || "").replace(/\D/g, "");
+                const waLink = phoneDigits
+                  ? `https://wa.me/${phoneDigits.length <= 11 ? "55" + phoneDigits : phoneDigits}`
+                  : "";
+
+                return (
+                  <div
+                    key={i}
+                    className="p-4 rounded-xl border border-border bg-card/60 hover:bg-muted/20 transition-colors space-y-2.5"
+                  >
+                    <div className="text-sm font-medium text-foreground italic border-l-2 border-primary pl-3 py-0.5">
+                      &ldquo;{item.texto}&rdquo;
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1 text-xs text-muted-foreground border-t border-border/50">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-foreground">{item.aluno}</span>
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
+                          {item.curso || "Geral"}
+                        </Badge>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {phoneDigits && (
+                          <a
+                            href={waLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline font-mono"
+                          >
+                            <Phone className="h-3 w-3" /> {formatPhone(item.telefone)}
+                          </a>
+                        )}
+                        {item.email && (
+                          <a
+                            href={`mailto:${item.email}`}
+                            className="text-[11px] text-muted-foreground hover:text-foreground"
+                          >
+                            {item.email}
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>
                 );
-              });
-            })()}
+              })
+            )}
           </div>
-        )}
-      </ChartCard>
-        </TabsContent>
+        </DialogContent>
+      </Dialog>
+    </TabsContent>
 
         <TabsContent value="resultados" className="space-y-6 mt-0">
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
