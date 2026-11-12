@@ -185,6 +185,11 @@ const PHONE_COLS = [
 ];
 
 const SUBMISSION_DATE_COLS = [
+  "Submitted at",
+  "Submitted At",
+  "Submitted_at",
+  "Submitted",
+  "Submission Date",
   "Carimbo de data/hora",
   "Carimbo de data / hora",
   "Carimbo de data",
@@ -200,13 +205,20 @@ const SUBMISSION_DATE_COLS = [
   "Data da Matrícula",
   "Data de Matrícula",
   "Data Matricula",
-  "Data de Início",
 ];
 
 function parseSubmissionDate(value: string): Date | null {
   if (!value) return null;
   const s = value.trim();
-  // dd/mm/yyyy with optional hh:mm:ss
+  // 1. ISO format: yyyy-mm-dd (com hora opcional)
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  if (iso) {
+    const hour = iso[4] ? +iso[4] : 0;
+    const min = iso[5] ? +iso[5] : 0;
+    const sec = iso[6] ? +iso[6] : 0;
+    return new Date(+iso[1], +iso[2] - 1, +iso[3], hour, min, sec);
+  }
+  // 2. BR format: dd/mm/yyyy (com hora opcional)
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
   if (m) {
     const hour = m[4] ? +m[4] : 0;
@@ -218,26 +230,38 @@ function parseSubmissionDate(value: string): Date | null {
 }
 
 function extractSubmissionDate(r: Record<string, string>): Date | null {
-  // 1. Exact match on known timestamp columns
+  // 1. Match direto nas colunas conhecidas de envio de formulários
   const rawSpecific = getCol(r, SUBMISSION_DATE_COLS);
   if (rawSpecific) {
     const d = parseSubmissionDate(rawSpecific);
     if (d) return d;
   }
 
-  // 2. Iterate keys to catch variations like "Data", "Data:", "Timestamp", "Carimbo..."
+  // 2. Itera chaves para variações de envio de formulário, excluindo dados acadêmicos/cadastrais
   for (const [k, v] of Object.entries(r)) {
     if (!v || typeof v !== "string") continue;
     const nk = norm(k);
-    if (nk.includes("nasciment")) continue; // exclude birth dates
     if (
-      nk === "data" ||
-      nk === "data:" ||
+      nk.includes("nasciment") ||
+      nk.includes("inicio") ||
+      nk.includes("início") ||
+      nk.includes("final") ||
+      nk.includes("acesso") ||
+      nk.includes("disparo")
+    ) {
+      continue; // ignora datas que não são de preenchimento de formulário
+    }
+    if (
+      nk.includes("submitted") ||
       nk.includes("carimbo") ||
       nk.includes("timestamp") ||
-      nk.startsWith("data de") ||
-      nk.startsWith("data da") ||
-      nk.startsWith("data do")
+      nk === "data de envio" ||
+      nk === "data de preenchimento" ||
+      nk === "data do preenchimento" ||
+      nk === "data da resposta" ||
+      nk === "data de matrícula" ||
+      nk === "data da matrícula" ||
+      nk === "data matricula"
     ) {
       const d = parseSubmissionDate(v);
       if (d) return d;
@@ -389,20 +413,40 @@ export default function AltaRendaPage() {
       const n = looseKey(getCol(r, nameCols));
       const phone = getCol(r, phoneCols);
       const curso = normalizeCurso(getCol(r, cursoCols));
-      const date = extractSubmissionDate(r);
       const keys = [e && "e:" + e, n && "n:" + n].filter(Boolean) as string[];
       for (const k of keys) {
         if (phone && !phoneByKey.has(k)) phoneByKey.set(k, phone);
         if (curso && !cursoByKey.has(k)) cursoByKey.set(k, curso);
-        if (date && !dateByKey.has(k)) dateByKey.set(k, date);
       }
     };
 
-    for (const r of data.fichaMatricula)
+    const setDateFromRow = (r: Record<string, string>) => {
+      const date = extractSubmissionDate(r);
+      if (!date) return;
+      const e = norm(getCol(r, EMAIL_COLS));
+      const n = looseKey(getCol(r, NOME_COLS));
+      const keys = [e && "e:" + e, n && "n:" + n].filter(Boolean) as string[];
+      for (const k of keys) {
+        if (!dateByKey.has(k)) {
+          dateByKey.set(k, date);
+        } else {
+          // Em caso de múltiplos preenchimentos, preserva a data válida mais antiga
+          const prev = dateByKey.get(k)!;
+          if (date < prev) dateByKey.set(k, date);
+        }
+      }
+    };
+
+    // 1. Extração de datas e dados apenas das fichas oficiais de formulário
+    for (const r of data.fichaMatricula) {
       setFromRow(r, EMAIL_COLS, NOME_COLS, PHONE_COLS, CURSO_MATRICULA_COLS);
-    for (const r of data.formados)
+      setDateFromRow(r);
+    }
+    for (const r of data.formados) {
       setFromRow(r, EMAIL_COLS, NOME_COLS, PHONE_COLS, CURSO_FORMADOS_COLS);
-    for (const r of data.fichaAlunos10k)
+      setDateFromRow(r);
+    }
+    for (const r of data.fichaAlunos10k) {
       setFromRow(
         r,
         EMAIL_COLS,
@@ -410,6 +454,8 @@ export default function AltaRendaPage() {
         PHONE_COLS,
         ["Você foi (é) aluno de qual (quais) dos nossos cursos?", "Cursos", "Curso"],
       );
+      setDateFromRow(r);
+    }
     for (const r of data.alunosDiamante ?? [])
       setFromRow(
         r,
@@ -431,12 +477,10 @@ export default function AltaRendaPage() {
       const n = looseKey(getCol(r, ["Aluno(a)", "Nome"]));
       const phone = getCol(r, ["Whatsapp", "WhatsApp", "Telefone", "Celular", "Contato"]);
       const curso = normalizeCurso((r as any)._curso as string);
-      const date = extractSubmissionDate(r);
       const keys = [e && "e:" + e, n && "n:" + n].filter(Boolean) as string[];
       for (const k of keys) {
         if (phone && !phoneByKey.has(k)) phoneByKey.set(k, phone);
         if (curso && !cursoByKey.has(k)) cursoByKey.set(k, curso);
-        if (date && !dateByKey.has(k)) dateByKey.set(k, date);
       }
     }
 
@@ -606,8 +650,7 @@ export default function AltaRendaPage() {
       const email = getCol(r, ["Email", "E-mail"]);
       if (!nome && !email) continue;
       const keys = keysFor(email, nome);
-      const rowDate = extractSubmissionDate(r);
-      const effectiveDate = rowDate || lookupDate(keys);
+      const effectiveDate = lookupDate(keys);
       push({
         nome,
         email,
@@ -627,8 +670,7 @@ export default function AltaRendaPage() {
       const email = getCol(r, ["Email", "E-mail"]);
       if (!nome && !email) continue;
       const keys = keysFor(email, nome);
-      const rowDate = extractSubmissionDate(r);
-      const effectiveDate = rowDate || lookupDate(keys);
+      const effectiveDate = lookupDate(keys);
       push({
         nome,
         email,
