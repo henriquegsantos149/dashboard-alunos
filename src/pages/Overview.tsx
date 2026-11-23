@@ -633,32 +633,16 @@ export default function Overview() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setFormadosOpen(true)}
-            className="gap-2 border-primary/40 hover:bg-primary/10 text-primary text-xs h-9 font-medium shadow-sm"
-            title="Abrir relatório e baixar lista de alunos com status Concluída e Formando"
-          >
-            <GraduationCap className="h-4 w-4" />
-            <span>Concluídos & Formando</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-primary/20 text-primary font-semibold">
-              {metrics.totalConcluidosFormando}
-            </span>
-          </Button>
-
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
-            <TabsList className="bg-muted/50 h-9">
-              <TabsTrigger value="all" className="text-xs">Todas</TabsTrigger>
-              <TabsTrigger value="ggsr" className="text-xs">Pós-GGSR</TabsTrigger>
-              <TabsTrigger value="mba" className="text-xs">MBA</TabsTrigger>
-              <TabsTrigger value="alpa" className="text-xs">Pós-ALPA</TabsTrigger>
-              <TabsTrigger value="grac" className="text-xs">Pós-GRAC</TabsTrigger>
-              <TabsTrigger value="iama" className="text-xs">Pós-IA.MA</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <TabsList className="bg-muted/50">
+            <TabsTrigger value="all">Todas</TabsTrigger>
+            <TabsTrigger value="ggsr">Pós-GGSR</TabsTrigger>
+            <TabsTrigger value="mba">MBA</TabsTrigger>
+            <TabsTrigger value="alpa">Pós-ALPA</TabsTrigger>
+            <TabsTrigger value="grac">Pós-GRAC</TabsTrigger>
+            <TabsTrigger value="iama">Pós-IA.MA</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       <section className={`grid gap-3 sm:gap-4 ${
