@@ -126,6 +126,8 @@ type Aluno = {
   status: string;
   formacao: string;
   dataNascimentoDate: Date | null;
+  dataInicio?: string;
+  dataFinal?: string;
 };
 
 const STATUS_RANK: Record<string, number> = {
@@ -143,6 +145,16 @@ const STATUS_RANK: Record<string, number> = {
 const STATUS_ELEGIVEIS = ["Ativa", "Pré-confirmada", "Concluída", "Formando"];
 
 const cursosLabel = (a: Aluno) => Array.from(a.cursos).join(", ");
+
+function formatDateSimple(raw: string): string {
+  if (!raw) return "—";
+  const s = raw.trim();
+  const m = s.match(/^(\d{1,2}\/\d{1,2}\/\d{4})/);
+  if (m) return m[1];
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return `${iso[3].padStart(2, "0")}/${iso[2].padStart(2, "0")}/${iso[1]}`;
+  return s;
+}
 
 // ---------- CSV ----------
 function downloadCSV(filename: string, header: string[], rows: string[][]) {
@@ -237,6 +249,10 @@ export default function ComercialPage() {
       const tel = getCol(r, ["Whatsapp", "WhatsApp", "Telefone", "Celular", "Contato"]).trim();
       const status = matchStatus(getCol(r, ["Status de Matrícula"]));
       const formacaoRow = matchFormacao(getCol(r, ["Formação", "Formação Acadêmica"]));
+      const dataInicioRaw = getCol(r, ["Data de Início", "Data de Inicio", "Início", "Inicio"]).trim();
+      const dataFinalRaw = getCol(r, ["Data Final", "Data Término", "Data Termino", "Término", "Termino", "Fim"]).trim();
+      const dataInicio = formatDateSimple(dataInicioRaw);
+      const dataFinal = formatDateSimple(dataFinalRaw);
       if (!nome && !email) continue;
 
       const ek = email ? "e:" + normEmail(email) : "";
@@ -252,6 +268,8 @@ export default function ComercialPage() {
         if (!existing.telefone) existing.telefone = tel || p.telefone || "";
         if (!existing.formacao) existing.formacao = formacaoRow || p.formacao || "";
         if (!existing.dataNascimentoDate) existing.dataNascimentoDate = p.dataNascimentoDate || null;
+        if (!existing.dataInicio && dataInicio !== "—") existing.dataInicio = dataInicio;
+        if (!existing.dataFinal && dataFinal !== "—") existing.dataFinal = dataFinal;
       } else {
         byKey.set(key, {
           key,
@@ -262,6 +280,8 @@ export default function ComercialPage() {
           status,
           formacao: formacaoRow || p.formacao || "",
           dataNascimentoDate: p.dataNascimentoDate || null,
+          dataInicio: dataInicio !== "—" ? dataInicio : "",
+          dataFinal: dataFinal !== "—" ? dataFinal : "",
         });
       }
     }
@@ -382,13 +402,15 @@ export default function ComercialPage() {
   const exportUpgradeCSV = (file: string, list: Aluno[]) =>
     downloadCSV(
       file,
-      ["Nome", "E-mail", "Telefone", "Curso Concluído", "Status"],
+      ["Nome", "E-mail", "Telefone", "Pós-Graduação", "Status", "Data de Início", "Data Final"],
       list.map((a) => [
         a.nome,
         a.email,
         formatPhone(a.telefone),
         cursosLabel(a) || "—",
         a.status,
+        a.dataInicio || "—",
+        a.dataFinal || "—",
       ]),
     );
 
@@ -716,8 +738,10 @@ function UpgradeTable({ list }: { list: Aluno[] }) {
             <th className="text-left font-medium py-2 px-3">Nome</th>
             <th className="text-left font-medium py-2 px-3">E-mail</th>
             <th className="text-left font-medium py-2 px-3">Telefone</th>
-            <th className="text-left font-medium py-2 px-3">Curso Concluído</th>
+            <th className="text-left font-medium py-2 px-3">Pós-Graduação</th>
             <th className="text-left font-medium py-2 px-3">Status</th>
+            <th className="text-left font-medium py-2 px-3">Início</th>
+            <th className="text-left font-medium py-2 px-3">Data Final</th>
           </tr>
         </thead>
         <tbody>
@@ -737,11 +761,17 @@ function UpgradeTable({ list }: { list: Aluno[] }) {
                     {a.status || "—"}
                   </Badge>
                 </td>
+                <td className="py-2 px-3 tabular-nums text-muted-foreground whitespace-nowrap">
+                  {a.dataInicio || "—"}
+                </td>
+                <td className="py-2 px-3 tabular-nums text-muted-foreground whitespace-nowrap">
+                  {a.dataFinal || "—"}
+                </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={5} className="py-6 text-center text-muted-foreground">
+              <td colSpan={7} className="py-6 text-center text-muted-foreground">
                 Nenhum aluno encontrado para o curso selecionado.
               </td>
             </tr>

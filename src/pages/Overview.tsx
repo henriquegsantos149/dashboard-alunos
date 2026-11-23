@@ -268,7 +268,7 @@ export default function Overview() {
   }, [data, filter]);
 
   const metrics = useMemo(() => {
-    let ativos = 0, formados = 0, saude = 0, inativos = 0, atrasados = 0, evasao = 0, baseElegivel = 0;
+    let ativos = 0, formados = 0, formando = 0, saude = 0, inativos = 0, atrasados = 0, evasao = 0, baseElegivel = 0;
     // Total = alunos ÚNICOS (matrícula/e-mail/nome), sem linhas vazias e sem
     // matrículas canceladas/indeferidas (trancamentos).
     const uniq = new Set<string>();
@@ -284,6 +284,7 @@ export default function Overview() {
 
       if (isActive) ativos++;
       if (status === "Concluída") formados++;
+      if (status === "Formando") formando++;
       if (status === "Ativa" || status === "Pré-confirmada" || status === "Concluída") baseElegivel++;
       if (status === "Não concluída") evasao++;
       if (status === "Ativa" || status === "Pré-confirmada") {
@@ -305,7 +306,22 @@ export default function Overview() {
     }
     const pct = (n: number) => (ativos > 0 ? Math.round((n / ativos) * 100) : 0);
     const pctBase = (n: number) => (baseElegivel > 0 ? Math.round((n / baseElegivel) * 100) : 0);
-    return { total: uniq.size, ativos, formados, saude, inativos, saudePct: pct(saude), inativosPct: pct(inativos), atrasados, evasao, atrasadosPct: pctBase(atrasados), evasaoPct: pctBase(evasao) };
+    const totalConcluidosFormando = formados + formando;
+    return {
+      total: uniq.size,
+      ativos,
+      formados,
+      formando,
+      totalConcluidosFormando,
+      saude,
+      inativos,
+      saudePct: pct(saude),
+      inativosPct: pct(inativos),
+      atrasados,
+      evasao,
+      atrasadosPct: pctBase(atrasados),
+      evasaoPct: pctBase(evasao),
+    };
   }, [rows]);
 
   const statusData = useMemo(
@@ -617,16 +633,32 @@ export default function Overview() {
           </p>
         </div>
 
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
-          <TabsList className="bg-muted/50">
-            <TabsTrigger value="all">Todas</TabsTrigger>
-            <TabsTrigger value="ggsr">Pós-GGSR</TabsTrigger>
-            <TabsTrigger value="mba">MBA</TabsTrigger>
-            <TabsTrigger value="alpa">Pós-ALPA</TabsTrigger>
-            <TabsTrigger value="grac">Pós-GRAC</TabsTrigger>
-            <TabsTrigger value="iama">Pós-IA.MA</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFormadosOpen(true)}
+            className="gap-2 border-primary/40 hover:bg-primary/10 text-primary text-xs h-9 font-medium shadow-sm"
+            title="Abrir relatório e baixar lista de alunos com status Concluída e Formando"
+          >
+            <GraduationCap className="h-4 w-4" />
+            <span>Concluídos & Formando</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-primary/20 text-primary font-semibold">
+              {metrics.totalConcluidosFormando}
+            </span>
+          </Button>
+
+          <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+            <TabsList className="bg-muted/50 h-9">
+              <TabsTrigger value="all" className="text-xs">Todas</TabsTrigger>
+              <TabsTrigger value="ggsr" className="text-xs">Pós-GGSR</TabsTrigger>
+              <TabsTrigger value="mba" className="text-xs">MBA</TabsTrigger>
+              <TabsTrigger value="alpa" className="text-xs">Pós-ALPA</TabsTrigger>
+              <TabsTrigger value="grac" className="text-xs">Pós-GRAC</TabsTrigger>
+              <TabsTrigger value="iama" className="text-xs">Pós-IA.MA</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       <section className={`grid gap-3 sm:gap-4 ${
@@ -655,7 +687,15 @@ export default function Overview() {
             loading={isLoading}
           />
         )}
-        <StatCard color="pink" icon={GraduationCap} label="Formados" value={metrics.formados} hint="Status concluída" loading={isLoading} onClick={() => setFormadosOpen(true)} />
+        <StatCard
+          color="pink"
+          icon={GraduationCap}
+          label="Concluídos & Formando"
+          value={metrics.totalConcluidosFormando}
+          hint={`${metrics.formados} concluídas · ${metrics.formando} formando`}
+          loading={isLoading}
+          onClick={() => setFormadosOpen(true)}
+        />
         {filter !== "all" && (
           <StatCard
             color="destructive"
@@ -710,21 +750,21 @@ export default function Overview() {
       </Dialog>
 
       <Dialog open={formadosOpen} onOpenChange={setFormadosOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <div className="flex items-start justify-between gap-4 pr-8">
-              <DialogTitle>Relatório de Alunos Formados (Status Concluída)</DialogTitle>
-              <Button
-                size="sm"
-                onClick={() => exportFormadosCSV(computeFormados(rows))}
-                disabled={metrics.formados === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exportar Contatos dos Formados (.CSV)
-              </Button>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pr-6">
+              <div>
+                <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                  Alunos Concluídos & Formando das Pós-Graduações
+                </DialogTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lista consolidada com contatos, pós-graduação, status e datas de início e final na pós.
+                </p>
+              </div>
             </div>
           </DialogHeader>
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div className="max-h-[75vh] overflow-y-auto pt-2">
             <FormadosList rows={rows} />
           </div>
         </DialogContent>
